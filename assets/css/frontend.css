@@ -1,0 +1,36 @@
+.gf-odoo-ticket-status {
+	padding: 1rem;
+	border: 1px solid #e0e0e0;
+	border-radius: 6px;
+	background: #fff;
+}
+
+.gf-odoo-ticket-label {
+	margin: 0 0 0.5rem;
+	font-weight: 600;
+}
+
+.gf-odoo-ticket-id {
+	font-weight: 600;
+	font-size: 1.1em;
+	margin: 0.25rem 0;
+}
+
+.gf-odoo-ticket-stage {
+	margin: 0.25rem 0;
+}
+
+.gf-odoo-ticket-agent {
+	margin: 0.25rem 0;
+	color: #50575e;
+}
+
+.gf-odoo-ticket-pending {
+	color: #888;
+	margin: 0.25rem 0;
+}
+
+.gf-odoo-ticket-error {
+	color: #c00;
+	margin: 0.25rem 0;
+}
