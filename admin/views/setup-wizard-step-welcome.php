@@ -1,6 +1,6 @@
 <?php
 /**
- * Setup wizard — step 1 (welcome).
+ * Setup wizard, step 1 (welcome).
  *
  * @package GF_Odoo_Connector
  */

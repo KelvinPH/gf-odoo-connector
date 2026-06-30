@@ -324,7 +324,7 @@ class GF_Odoo_Country_Map {
      * Resolve a GF form field value to an Odoo country ID.
      *
      * Tries exact name match, ISO code match, then partial name match.
-     * Returns null if no match found — the field will be skipped silently.
+     * Returns null if no match found, so the field is skipped silently.
      *
      * @param string $input Raw value from the GF entry (e.g. "Netherlands", "NL").
      *

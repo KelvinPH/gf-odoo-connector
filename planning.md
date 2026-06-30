@@ -1,4 +1,4 @@
-# GF–Odoo Connector Plugin — Project Planning
+# GF-Odoo Connector Plugin: Project Planning
 
 ## Project overview
 
@@ -8,8 +8,8 @@ A WordPress plugin that connects Gravity Forms to Odoo 19 Enterprise Edition via
 
 - **WordPress** running locally at `localhost:10003`
 - **Gravity Forms** (installed and active)
-- **Odoo 19 Enterprise Edition** — JSON-RPC API authenticated with an administrator API key
-- **PHP 8.x** — OOP, no external Composer dependencies
+- **Odoo 19 Enterprise Edition**: JSON-RPC API authenticated with an administrator API key
+- **PHP 8.x**: OOP, no external Composer dependencies
 - **Vanilla JS + WP Admin UI** for the settings screens
 
 ## Plugin architecture
@@ -18,7 +18,7 @@ A WordPress plugin that connects Gravity Forms to Odoo 19 Enterprise Edition via
 gf-odoo-connector/
 ├── gf-odoo-connector.php          # Main plugin bootstrap file
 ├── includes/
-│   ├── class-gf-odoo-addon.php    # Extends GFFeedAddOn — main add-on class
+│   ├── class-gf-odoo-addon.php    # Extends GFFeedAddOn, main add-on class
 │   ├── class-odoo-api.php         # JSON-RPC API client (auth, requests, error handling)
 │   ├── class-crm-handler.php      # Creates/updates res.partner and crm.lead
 │   ├── class-helpdesk-handler.php # Creates helpdesk.ticket
@@ -53,7 +53,7 @@ gf-odoo-connector/
 
 - Extends `GFFeedAddOn` (requires GF 1.9+)
 - Feed UI provides: module selector (CRM / Helpdesk), field mapping table, conditional logic
-- Hook used: `process_feed()` — triggered after successful form submission
+- Hook used: `process_feed()`, triggered after successful form submission
 - Async processing via WP background processing to avoid timeout on slow Odoo responses
 
 ## Data flow

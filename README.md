@@ -2,7 +2,7 @@
 
 Connect [Gravity Forms](https://www.gravityforms.com/) to [Odoo](https://www.odoo.com/) CRM and Helpdesk. Form submissions are synced automatically to Odoo as leads, contacts, and support tickets.
 
-- **Version:** 1.1.2
+- **Version:** 1.2.0
 - **Requires:** WordPress 6.4+ · Gravity Forms 2.5+ · PHP 8.0+
 - **Tested with:** Odoo 19 Enterprise
 - **License:** GPL-2.0-or-later
@@ -11,20 +11,20 @@ Connect [Gravity Forms](https://www.gravityforms.com/) to [Odoo](https://www.odo
 
 ## Features
 
-- **CRM sync** — create/update contacts (`res.partner`) and leads (`crm.lead`).
-- **Helpdesk sync** — create support tickets (`helpdesk.ticket`).
-- **Per-field mapping** — map each Odoo field from a form field, a fixed value, auto-fill, or turn it off.
-- **Feed templates** — configure mappings once and apply them to many forms, with per-form overrides and smart label-based remapping.
-- **Global CRM assignment** — set a default salesperson and sales team for *all* forms, with an optional "force on all forms" mode that ignores per-form overrides.
-- **Static lookups** — 251 countries and 9 industries resolved locally with zero extra API calls.
-- **Source capture** — auto-fills the submission page URL into `utm.source`.
-- **Asynchronous processing** — submissions return instantly; syncing runs in the background via Action Scheduler.
-- **Automatic retries** — failed syncs retry on a backoff schedule (+5 min → +1 hr → +24 hr) before notifying you.
-- **Two-way sync** — a secured webhook endpoint lets Odoo push ticket/lead updates back into entry notes.
-- **Error log** — searchable log with manual retry, bulk resolve, CSV export, and optional email alerts.
-- **Dashboard** — sync activity chart and a live connection status check.
-- **Security** — API keys stored encrypted (AES-256-CBC); HMAC-SHA256 webhook signature verification.
-- **Test mode** — tag all created Odoo records with a `[TEST]` prefix while you validate the setup.
+- **CRM sync**: create/update contacts (`res.partner`) and leads (`crm.lead`).
+- **Helpdesk sync**: create support tickets (`helpdesk.ticket`).
+- **Per-field mapping**: map each Odoo field from a form field, a fixed value, auto-fill, or turn it off.
+- **Feed templates**: configure mappings once and apply them to many forms, with per-form overrides and smart label-based remapping.
+- **Global CRM assignment**: set a default salesperson and sales team for *all* forms, with an optional "force on all forms" mode that ignores per-form overrides.
+- **Static lookups**: 251 countries and 9 industries resolved locally with zero extra API calls.
+- **Source capture**: auto-fills the submission page URL into `utm.source`.
+- **Asynchronous processing**: submissions return instantly; syncing runs in the background via Action Scheduler.
+- **Automatic retries**: failed syncs retry on a backoff schedule (+5 min → +1 hr → +24 hr) before notifying you.
+- **Two-way sync**: a secured webhook endpoint lets Odoo push ticket/lead updates back into entry notes.
+- **Error log**: searchable log with manual retry, bulk resolve, CSV export, and optional email alerts.
+- **Dashboard**: sync activity chart and a live connection status check.
+- **Security**: API keys stored encrypted (AES-256-CBC); HMAC-SHA256 webhook signature verification.
+- **Test mode**: tag all created Odoo records with a `[TEST]` prefix while you validate the setup.
 
 ## Requirements
 
@@ -61,8 +61,8 @@ On **GF Odoo Connector → Connection & API**, provide:
 
 Under **Connection & API → CRM assignment (all forms)**:
 
-- **Default salesperson / sales team** — applied to new leads from every CRM form.
-- **Force on all forms** — when enabled, every CRM form uses the global salesperson and sales team and any per-form override is ignored.
+- **Default salesperson / sales team**: applied to new leads from every CRM form.
+- **Force on all forms**: when enabled, every CRM form uses the global salesperson and sales team and any per-form override is ignored.
 
 Individual feeds default to **"Use global default"** and only diverge when you set a specific salesperson/team on the feed itself.
 
@@ -89,7 +89,7 @@ Templates let you configure a mapping once and reuse it across forms:
 2. Pick a sample form to use as the mapping reference.
 3. Configure all fields.
 4. On any form feed, choose **Use template** and select your template.
-5. Override individual fields per form as needed — fields are remapped automatically by label.
+5. Override individual fields per form as needed; fields are remapped automatically by label.
 
 ### Webhook (two-way sync)
 
@@ -108,9 +108,30 @@ Display a ticket's status on the front end with the shortcode:
 
 It reads `entry_id` from the URL automatically (e.g. a confirmation redirect to `thank-you/?entry_id={entry_id}`).
 
+## Updates
+
+The plugin updates itself from this repository's **GitHub Releases**: no wordpress.org listing required. Updates appear on the WordPress **Plugins** screen just like any other plugin (with the **enable auto-updates** toggle).
+
+How it works:
+
+- The plugin periodically calls the GitHub API for the latest **published release** of `KelvinPH/gf-odoo-connector` and compares its tag to the installed version.
+- If the release tag is newer, WordPress shows an update and installs the release's source ZIP on demand.
+
+### Publishing a new version
+
+1. Bump the version in `gf-odoo-connector.php` (both the header `Version:` and the `GF_ODOO_VERSION` constant), and update `CHANGELOG.md` / `README.txt`.
+2. Commit and push to `main`.
+3. Create a **GitHub Release** with a tag matching the version, e.g. `v1.2.0` (a leading `v` is fine, it's stripped when comparing). The release notes become the changelog shown in WordPress.
+4. Within ~12 hours every site sees the update; use **Dashboard → Updates → Check again** to pull it immediately.
+
+> **Important:** it must be a *published Release*, not just a pushed tag, because the updater reads `releases/latest`. The very first rollout of this self-update feature still has to be installed manually on each site; every release after that updates automatically.
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history. Latest:
+
+### 1.2.0
+- Self-update from GitHub Releases: updates appear on the WordPress Plugins screen.
 
 ### 1.1.2
 - Fixed industry mapping for "Corporate & Enterprise"; synced the industry list to current Odoo values.

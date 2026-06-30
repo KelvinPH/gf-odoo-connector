@@ -3,7 +3,7 @@
  * Plugin Name:       GF Odoo Connector
  * Plugin URI:        https://github.com/KelvinPH/gf-odoo-connector
  * Description:       Connect Gravity Forms to Odoo CRM and Helpdesk. Sync form submissions to leads, contacts, and tickets.
- * Version:           1.1.2
+ * Version:           1.2.0
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            Kelvin Huurman
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'GF_ODOO_FILE', __FILE__ );
-define( 'GF_ODOO_VERSION', '1.1.2' );
+define( 'GF_ODOO_VERSION', '1.2.0' );
 define( 'GF_ODOO_PATH', plugin_dir_path( GF_ODOO_FILE ) );
 define( 'GF_ODOO_URL', plugin_dir_url( GF_ODOO_FILE ) );
 define( 'GF_ODOO_MIN_GF_VERSION', '2.5' );
@@ -72,6 +72,7 @@ function gf_odoo_connector_autoload( $class ) {
 		'GF_Odoo_Country_Map'    => 'class-country-map.php',
 		'GF_Odoo_Industry_Map'   => 'class-industry-map.php',
 		'GF_Odoo_Encryption'     => 'class-encryption.php',
+		'GF_Odoo_GitHub_Updater' => 'class-github-updater.php',
 	);
 
 	if ( ! isset( $classes[ $class ] ) ) {
@@ -221,7 +222,7 @@ function gf_odoo_connector_bootstrap(): void {
 add_action( 'plugins_loaded', 'gf_odoo_connector_bootstrap', 5 );
 
 /**
- * Create or upgrade plugin database tables (safe during activation — no GF add-on class).
+ * Create or upgrade plugin database tables (safe during activation; no GF add-on class).
  */
 function gf_odoo_connector_create_db_tables(): void {
 	require_once GF_ODOO_PATH . 'includes/class-error-logger.php';
@@ -247,7 +248,7 @@ function gf_odoo_connector_activate(): void {
 		);
 	}
 
-	// Do not autoload GF_Odoo_Addon here — GFFeedAddOn may not be loaded yet during activation.
+	// Do not autoload GF_Odoo_Addon here; GFFeedAddOn may not be loaded yet during activation.
 	gf_odoo_connector_create_db_tables();
 
 	update_option( 'gf_odoo_db_version', GF_ODOO_DB_VERSION );
@@ -370,3 +371,33 @@ function gf_odoo_connector_register_webhook(): void {
 
 add_action( 'init', 'gf_odoo_connector_register_webhook', 20 );
 add_action( 'plugins_loaded', 'gf_odoo_connector_register_webhook', 25 );
+
+/**
+ * Enable self-updates from GitHub Releases (KelvinPH/gf-odoo-connector).
+ *
+ * Only registers where WordPress checks for plugin updates (admin, cron, CLI)
+ * to avoid overhead on front-end requests.
+ */
+function gf_odoo_connector_register_updater(): void {
+	if (
+		! is_admin()
+		&& ! wp_doing_cron()
+		&& ! ( defined( 'WP_CLI' ) && WP_CLI )
+	) {
+		return;
+	}
+
+	if ( ! class_exists( 'GF_Odoo_GitHub_Updater' ) ) {
+		return;
+	}
+
+	$updater = new GF_Odoo_GitHub_Updater(
+		GF_ODOO_FILE,
+		'KelvinPH',
+		'gf-odoo-connector',
+		GF_ODOO_VERSION
+	);
+	$updater->init();
+}
+
+add_action( 'init', 'gf_odoo_connector_register_updater' );

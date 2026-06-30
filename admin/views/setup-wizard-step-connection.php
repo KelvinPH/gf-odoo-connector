@@ -1,6 +1,6 @@
 <?php
 /**
- * Setup wizard — step 2 (connection).
+ * Setup wizard, step 2 (connection).
  *
  * @package GF_Odoo_Connector
  * @var GF_Odoo_Addon $addon Add-on instance.
@@ -21,7 +21,7 @@ $test_nonce = wp_create_nonce( 'gf_odoo_test_connection' );
 <div class="wz-field">
 	<div class="wz-label"><?php esc_html_e( 'Odoo URL', 'gf-odoo-connector' ); ?> <span class="wz-req"><?php esc_html_e( 'required', 'gf-odoo-connector' ); ?></span></div>
 	<input type="url" id="wz-odoo-url" class="wz-input" placeholder="https://yourcompany.odoo.com" value="<?php echo esc_attr( (string) ( $settings['odoo_url'] ?? '' ) ); ?>">
-	<div class="wz-hint"><?php esc_html_e( 'The base URL of your Odoo instance — no trailing slash.', 'gf-odoo-connector' ); ?></div>
+	<div class="wz-hint"><?php esc_html_e( 'The base URL of your Odoo instance (no trailing slash).', 'gf-odoo-connector' ); ?></div>
 </div>
 <div class="wz-field">
 	<div class="wz-label"><?php esc_html_e( 'Database name', 'gf-odoo-connector' ); ?> <span class="wz-req"><?php esc_html_e( 'required', 'gf-odoo-connector' ); ?></span></div>
@@ -88,7 +88,7 @@ $test_nonce = wp_create_nonce( 'gf_odoo_test_connection' );
 					showStatus( '✗ ' + ( data.data?.message || <?php echo wp_json_encode( __( 'Connection failed.', 'gf-odoo-connector' ) ); ?> ), 'error' );
 				}
 			})
-			.catch( () => showStatus( <?php echo wp_json_encode( __( 'Request failed — check your URL.', 'gf-odoo-connector' ) ); ?>, 'error' ) );
+			.catch( () => showStatus( <?php echo wp_json_encode( __( 'Request failed. Check your URL.', 'gf-odoo-connector' ) ); ?>, 'error' ) );
 	});
 
 	document.getElementById('wz-save-btn').addEventListener('click', function() {

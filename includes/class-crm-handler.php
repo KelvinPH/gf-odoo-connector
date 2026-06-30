@@ -262,7 +262,7 @@ class CRM_Handler {
 
 		if ( '' === $lead_title || ( '' !== $contact_name && $lead_title === $contact_name ) ) {
 			if ( '' !== $form_title && '' !== $contact_name ) {
-				$lead_title = sprintf( '%s — %s', $form_title, $contact_name );
+				$lead_title = sprintf( '%s: %s', $form_title, $contact_name );
 			} elseif ( '' !== $form_title ) {
 				$lead_title = $form_title;
 			} elseif ( '' !== $contact_name ) {
@@ -341,7 +341,7 @@ class CRM_Handler {
 					array( $lead_id ),
 				),
 				array(
-					// Omit user_id/stage_id — reading them can require res.users / crm.stage access the API user may lack.
+					// Omit user_id/stage_id; reading them can require res.users / crm.stage access the API user may lack.
 					'fields' => array( 'id', 'name', 'type', 'active', 'partner_id', 'team_id' ),
 				)
 			);

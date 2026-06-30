@@ -121,7 +121,7 @@ if ( 'connected' === $connection_status_value ) {
 									<?php if ( $entry_url ) : ?>
 										<a href="<?php echo esc_url( $entry_url ); ?>">#<?php echo esc_html( (string) $entry_id ); ?></a>
 									<?php else : ?>
-										—
+										-
 									<?php endif; ?>
 								</td>
 								<td title="<?php echo esc_attr( $message ); ?>"><?php echo esc_html( $truncated ); ?></td>
@@ -180,7 +180,7 @@ if ( 'connected' === $connection_status_value ) {
 										echo esc_html( human_time_diff( strtotime( $sync_at ), current_time( 'timestamp' ) ) );
 										esc_html_e( ' ago', 'gf-odoo-connector' );
 									} else {
-										echo '—';
+										echo '-';
 									}
 									?>
 								</td>
@@ -189,7 +189,7 @@ if ( 'connected' === $connection_status_value ) {
 									<?php if ( $entry_url ) : ?>
 										<a href="<?php echo esc_url( $entry_url ); ?>">#<?php echo esc_html( (string) $entry_id ); ?></a>
 									<?php else : ?>
-										—
+										-
 									<?php endif; ?>
 								</td>
 								<td><span class="gf-odoo-badge <?php echo esc_attr( $badge_class ); ?>"><?php echo esc_html( $module_label ); ?></span></td>
@@ -197,7 +197,7 @@ if ( 'connected' === $connection_status_value ) {
 									<?php if ( $odoo_link ) : ?>
 										<a href="<?php echo esc_url( $odoo_link['url'] ); ?>" target="_blank" rel="noopener noreferrer">#<?php echo esc_html( (string) $odoo_link['id'] ); ?></a>
 									<?php else : ?>
-										—
+										-
 									<?php endif; ?>
 								</td>
 							</tr>

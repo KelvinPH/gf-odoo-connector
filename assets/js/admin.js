@@ -1131,7 +1131,7 @@
 
 		$result.text( '' );
 		$feed.prop( 'disabled', true ).html(
-			'<option value="">' + escHtml( gfOdooAdmin.selectNone || '—' ) + '</option>'
+			'<option value="">' + escHtml( gfOdooAdmin.selectNone || 'None' ) + '</option>'
 		);
 
 		if ( ! formId || typeof gfOdooAdmin === 'undefined' ) {
@@ -1150,7 +1150,7 @@
 
 				var html =
 					'<option value="">' +
-					escHtml( gfOdooAdmin.selectNone || '— Select a feed —' ) +
+					escHtml( gfOdooAdmin.selectNone || 'Select a feed' ) +
 					'</option>';
 
 				response.data.feeds.forEach( function ( feed ) {

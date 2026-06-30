@@ -24,7 +24,7 @@ class Helpdesk_Field_Config {
 	 */
 	public static function rows(): array {
 		return array(
-			// Ticket — visitor-filled.
+			// Ticket: visitor-filled.
 			array(
 				'key'        => 'ticket_subject',
 				'label'      => __( 'Ticket subject', 'gf-odoo-connector' ),
@@ -77,7 +77,7 @@ class Helpdesk_Field_Config {
 				'ajax_action' => 'gf_odoo_get_branches',
 				'odoo_model'  => 'res.branch',
 			),
-			// Contact — visitor-filled.
+			// Contact: visitor-filled.
 			array(
 				'key'        => 'contact_name',
 				'label'      => __( 'Contact name', 'gf-odoo-connector' ),
@@ -137,7 +137,7 @@ class Helpdesk_Field_Config {
 				'required'   => false,
 				'fixed_type' => 'text',
 			),
-			// Product — visitor-filled.
+			// Product: visitor-filled.
 			array(
 				'key'        => 'ticket_serial',
 				'label'      => __( 'Serial number', 'gf-odoo-connector' ),

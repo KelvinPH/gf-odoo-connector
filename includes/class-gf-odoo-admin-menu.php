@@ -90,7 +90,7 @@ class GF_Odoo_Admin_Menu {
 	}
 
 	/**
-	 * Section labels are not real pages — send direct visits back to the dashboard.
+	 * Section labels are not real pages, so send direct visits back to the dashboard.
 	 */
 	public function redirect_label_menu_pages(): void {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended

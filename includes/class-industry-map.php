@@ -47,7 +47,7 @@ class GF_Odoo_Industry_Map {
      * Resolve a GF form field value to an Odoo industry ID.
      *
      * Case-insensitive match against the static industry map (res.partner.industry).
-     * Returns null if no match found — the field will be skipped silently.
+     * Returns null if no match found, so the field is skipped silently.
      *
      * @param string $input Raw value from the GF entry (e.g. "Medical", "Fitness & Sports").
      *

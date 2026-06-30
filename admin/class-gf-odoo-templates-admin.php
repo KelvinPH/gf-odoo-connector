@@ -67,7 +67,7 @@ class GF_Odoo_Templates_Admin {
 			array(
 				'ajaxUrl'              => admin_url( 'admin-ajax.php' ),
 				'odooNonce'            => wp_create_nonce( 'gf_odoo_nonce' ),
-				'selectField'          => esc_html__( '— Select a field —', 'gf-odoo-connector' ),
+				'selectField'          => esc_html__( 'Select a field', 'gf-odoo-connector' ),
 				'initialFields'        => $this->get_form_field_choices( $sample_form_id ),
 				'sampleFieldsError'    => esc_html__( 'Could not load form fields. Please refresh and try again.', 'gf-odoo-connector' ),
 				'sampleFieldsEmpty'    => esc_html__( 'No mappable fields were found in that form.', 'gf-odoo-connector' ),
@@ -184,7 +184,7 @@ class GF_Odoo_Templates_Admin {
 			wp_kses(
 				sprintf(
 					/* translators: 1: number of forms, 2: link to template */
-					__( 'Template updated. %1$d forms have overrides — <a href="%2$s">review linked forms</a>.', 'gf-odoo-connector' ),
+					__( 'Template updated. %1$d forms have overrides. <a href="%2$s">Review linked forms</a>.', 'gf-odoo-connector' ),
 					$count,
 					esc_url( $url )
 				),
@@ -342,9 +342,9 @@ class GF_Odoo_Templates_Admin {
 
 		echo '<div class="gf-odoo-field">';
 		echo '<label class="gf-odoo-label" for="gf-odoo-sample-form">' . esc_html__( 'Sample form', 'gf-odoo-connector' );
-		echo ' <span class="gf-odoo-label-note">' . esc_html__( '— used for "From field" dropdowns', 'gf-odoo-connector' ) . '</span></label>';
+		echo ' <span class="gf-odoo-label-note">' . esc_html__( 'used for "From field" dropdowns', 'gf-odoo-connector' ) . '</span></label>';
 		echo '<select class="gf-odoo-select gf-odoo-sample-form-select" id="gf-odoo-sample-form" name="sample_form_id">';
-		echo '<option value="">' . esc_html__( '— No sample form selected —', 'gf-odoo-connector' ) . '</option>';
+		echo '<option value="">' . esc_html__( 'No sample form selected', 'gf-odoo-connector' ) . '</option>';
 		foreach ( $forms as $form ) {
 			$form_obj = is_object( $form ) ? $form : (object) $form;
 			$fid      = (int) ( $form_obj->id ?? 0 );
@@ -361,7 +361,7 @@ class GF_Odoo_Templates_Admin {
 		echo '</select>';
 		echo '<p class="gf-odoo-hint">' . esc_html__( 'Choose a form representative of all forms that will use this template. Its fields appear in the "From field" dropdowns below.', 'gf-odoo-connector' ) . '</p>';
 		echo '<p id="gf-odoo-sample-form-notice" class="gf-odoo-notice gf-odoo-notice--warning"' . ( $sample_form_id > 0 ? ' hidden' : '' ) . '>';
-		echo esc_html__( 'Select a sample form here before using "From field" mappings — otherwise field dropdowns stay empty.', 'gf-odoo-connector' );
+		echo esc_html__( 'Select a sample form here before using "From field" mappings, otherwise field dropdowns stay empty.', 'gf-odoo-connector' );
 		echo '</p>';
 		echo '</div>';
 		echo '</div></div>';
@@ -391,7 +391,7 @@ class GF_Odoo_Templates_Admin {
 		$boot = array(
 			'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
 			'odooNonce'     => wp_create_nonce( 'gf_odoo_nonce' ),
-			'selectField'   => __( '— Select a field —', 'gf-odoo-connector' ),
+			'selectField'   => __( 'Select a field', 'gf-odoo-connector' ),
 			'initialFields' => $this->get_form_field_choices( $sample_form_id ),
 			'loadError'     => __( 'Could not load form fields. Please refresh and try again.', 'gf-odoo-connector' ),
 			'emptyError'    => __( 'No mappable fields were found in that form.', 'gf-odoo-connector' ),
@@ -728,7 +728,7 @@ class GF_Odoo_Templates_Admin {
 				array(
 					'pending' => true,
 					'message' => __(
-						'Template link queued. Save this feed with “Update Settings” — the template will be linked automatically.',
+						'Template link queued. Save this feed with “Update Settings” and the template will be linked automatically.',
 						'gf-odoo-connector'
 					),
 				)

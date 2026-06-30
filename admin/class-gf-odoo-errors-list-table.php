@@ -117,7 +117,7 @@ class GF_Odoo_Errors_List_Table extends WP_List_Table {
 		$raw = (string) ( $item['created_at'] ?? '' );
 
 		if ( '' === $raw || str_starts_with( $raw, '0000-' ) ) {
-			return '<span class="gf-odoo-empty-cell">—</span>';
+			return '<span class="gf-odoo-empty-cell">-</span>';
 		}
 
 		$timestamp = strtotime( $raw );
@@ -130,7 +130,7 @@ class GF_Odoo_Errors_List_Table extends WP_List_Table {
 		}
 
 		if ( ! $timestamp || $timestamp <= 0 ) {
-			return '<span class="gf-odoo-empty-cell">—</span>';
+			return '<span class="gf-odoo-empty-cell">-</span>';
 		}
 
 		$formatted = wp_date(
@@ -151,7 +151,7 @@ class GF_Odoo_Errors_List_Table extends WP_List_Table {
 		$form_id = (int) $item['form_id'];
 
 		if ( $form_id <= 0 || ! class_exists( 'GFAPI' ) ) {
-			return '<span class="gf-odoo-empty-cell">—</span>';
+			return '<span class="gf-odoo-empty-cell">-</span>';
 		}
 
 		$form = GFAPI::get_form( $form_id );
@@ -175,7 +175,7 @@ class GF_Odoo_Errors_List_Table extends WP_List_Table {
 		$form_id  = (int) $item['form_id'];
 
 		if ( $entry_id <= 0 || $form_id <= 0 ) {
-			return '<span class="gf-odoo-empty-cell">—</span>';
+			return '<span class="gf-odoo-empty-cell">-</span>';
 		}
 
 		$url = admin_url(
@@ -329,7 +329,7 @@ class GF_Odoo_Errors_List_Table extends WP_List_Table {
 			$html .= '<div class="gf-odoo-error-message" title="' . esc_attr( $message ) . '">' . esc_html( $short ) . '</div>';
 		}
 
-		return $html !== '' ? $html : '<span class="gf-odoo-empty-cell">—</span>';
+		return $html !== '' ? $html : '<span class="gf-odoo-empty-cell">-</span>';
 	}
 
 	/**

@@ -1,6 +1,6 @@
 <?php
 /**
- * Uninstall GF Odoo Connector — runs when the plugin is deleted from WordPress.
+ * Uninstall GF Odoo Connector. Runs when the plugin is deleted from WordPress.
  *
  * @package GF_Odoo_Connector
  */

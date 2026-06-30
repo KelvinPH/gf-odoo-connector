@@ -60,8 +60,8 @@ class GF_Odoo_Testing_Admin {
 			'crm_source'       => __( 'CRM: Source field is auto-filled with the page URL', 'gf-odoo-connector' ),
 			'helpdesk_ticket'  => __( 'Helpdesk: Form submission creates a ticket in the correct team', 'gf-odoo-connector' ),
 			'helpdesk_contact' => __( 'Helpdesk: Contact is linked to the ticket by email lookup', 'gf-odoo-connector' ),
-			'async_submit'     => __( 'Form submission returns instantly — no waiting for Odoo', 'gf-odoo-connector' ),
-			'retry_auto'       => __( 'Auto-retry: Break Odoo URL, submit form, fix URL — ticket syncs automatically', 'gf-odoo-connector' ),
+			'async_submit'     => __( 'Form submission returns instantly, with no waiting for Odoo', 'gf-odoo-connector' ),
+			'retry_auto'       => __( 'Auto-retry: break Odoo URL, submit form, fix URL, and the ticket syncs automatically', 'gf-odoo-connector' ),
 			'retry_manual'     => __( 'Manual retry: Failed entry retries correctly from error log', 'gf-odoo-connector' ),
 			'error_log'        => __( 'Error log shows correct date, status, and error message', 'gf-odoo-connector' ),
 			'template_link'    => __( 'Template: Linking a form to a template syncs correctly', 'gf-odoo-connector' ),
@@ -114,7 +114,7 @@ class GF_Odoo_Testing_Admin {
 						<th scope="row"><label for="gf-odoo-test-form"><?php esc_html_e( 'Form', 'gf-odoo-connector' ); ?></label></th>
 						<td>
 							<select id="gf-odoo-test-form" class="regular-text">
-								<option value=""><?php esc_html_e( '— Select a form —', 'gf-odoo-connector' ); ?></option>
+								<option value=""><?php esc_html_e( 'Select a form', 'gf-odoo-connector' ); ?></option>
 								<?php foreach ( $forms as $form ) : ?>
 									<option value="<?php echo esc_attr( (string) $form['id'] ); ?>"><?php echo esc_html( $form['title'] ); ?></option>
 								<?php endforeach; ?>
@@ -125,7 +125,7 @@ class GF_Odoo_Testing_Admin {
 						<th scope="row"><label for="gf-odoo-test-feed"><?php esc_html_e( 'Feed', 'gf-odoo-connector' ); ?></label></th>
 						<td>
 							<select id="gf-odoo-test-feed" class="regular-text" disabled>
-								<option value=""><?php esc_html_e( '— Select a feed —', 'gf-odoo-connector' ); ?></option>
+								<option value=""><?php esc_html_e( 'Select a feed', 'gf-odoo-connector' ); ?></option>
 							</select>
 						</td>
 					</tr>
@@ -261,8 +261,8 @@ class GF_Odoo_Testing_Admin {
 							<?php
 							$row     = isset( $results[ $key ] ) && is_array( $results[ $key ] ) ? $results[ $key ] : array();
 							$passed  = ! empty( $row['passed'] );
-							$message = isset( $row['message'] ) ? (string) $row['message'] : '—';
-							$ran_at  = isset( $row['ran_at'] ) ? (string) $row['ran_at'] : '—';
+							$message = isset( $row['message'] ) ? (string) $row['message'] : '-';
+							$ran_at  = isset( $row['ran_at'] ) ? (string) $row['ran_at'] : '-';
 							$status  = isset( $row['status'] ) ? (string) $row['status'] : ( ! empty( $row ) ? ( $passed ? 'pass' : 'fail' ) : 'pending' );
 							?>
 							<tr data-scenario="<?php echo esc_attr( $key ); ?>">
@@ -270,7 +270,7 @@ class GF_Odoo_Testing_Admin {
 								<td class="gf-odoo-scenario-ran-at"><?php echo esc_html( $ran_at ); ?></td>
 								<td class="gf-odoo-scenario-status">
 									<?php
-									if ( 'pending' === $status || '—' === $ran_at ) {
+									if ( 'pending' === $status || '-' === $ran_at ) {
 										echo '<span class="gf-odoo-badge">' . esc_html__( 'Not run', 'gf-odoo-connector' ) . '</span>';
 									} elseif ( $passed ) {
 										echo '<span class="gf-odoo-badge badge-crm">' . esc_html__( 'Pass', 'gf-odoo-connector' ) . '</span>';

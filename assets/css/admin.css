@@ -1,5 +1,5 @@
 /**
- * GF Odoo Connector — Admin design system
+ * GF Odoo Connector: Admin design system
  *
  * @package GF_Odoo_Connector
  */
@@ -1370,7 +1370,7 @@
 	max-width: 40rem;
 }
 
-/* Hide GF tooltip icons — we use description text instead */
+/* Hide GF tooltip icons; we use description text instead */
 .gf-odoo-page .gform-icon--question-mark,
 .gf-odoo-page .gfield_tooltip,
 .gf-odoo-page .tooltip,

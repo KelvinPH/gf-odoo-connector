@@ -2,19 +2,25 @@
 
 All notable changes to GF Odoo Connector are documented here.
 
-## [1.1.2] — 2026-06-30
+## [1.2.0] - 2026-06-30
+
+### Added
+
+- Self-update from GitHub Releases: the plugin now checks `KelvinPH/gf-odoo-connector` for newer published releases and surfaces updates on the WordPress Plugins screen (including the auto-update toggle). No more manual uploads after the first install of this version.
+
+## [1.1.2] - 2026-06-30
 
 ### Fixed
 
-- Industry mapping: "Corporate & Enterprise" (and any value not in the static map) no longer fails to sync — the industry map was synced to the current Odoo `res.partner.industry` list (added "Corporate & Enterprise", "Others", "Paramedical"; removed stale "ODM"/"Online")
+- Industry mapping: "Corporate & Enterprise" (and any value not in the static map) no longer fails to sync; the industry map was synced to the current Odoo `res.partner.industry` list (added "Corporate & Enterprise", "Others", "Paramedical"; removed stale "ODM"/"Online")
 
-## [1.1.1] — 2026-06-22
+## [1.1.1] - 2026-06-22
 
 ### Added
 
 - "Force on all forms" option for global CRM assignment: when enabled, every CRM form uses the global salesperson and sales team, ignoring per-form overrides
 
-## [1.1.0] — 2026-06-22
+## [1.1.0] - 2026-06-22
 
 ### Added
 
@@ -32,7 +38,7 @@ All notable changes to GF Odoo Connector are documented here.
 - Template-linked feeds now display the actual mapped field instead of empty override dropdowns, with auto-repair of corrupted overrides on load
 - Field-mapping overrides no longer wipe template values on save (sparse overrides are merged, not replaced)
 
-## [1.0.0] — 2026-06-04
+## [1.0.0] - 2026-06-04
 
 ### Added
 

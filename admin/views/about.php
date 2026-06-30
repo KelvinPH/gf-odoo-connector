@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<?php endif; ?>
 		<div>
 			<p class="gf-odoo-about-lead">
-				<?php esc_html_e( 'Syncs Gravity Forms submissions to Odoo—CRM leads and contacts, or Helpdesk tickets—using per-feed field mapping, templates, and background jobs.', 'gf-odoo-connector' ); ?>
+				<?php esc_html_e( 'Syncs Gravity Forms submissions to Odoo (CRM leads and contacts, or Helpdesk tickets) using per-feed field mapping, templates, and background jobs.', 'gf-odoo-connector' ); ?>
 			</p>
 			<p class="gf-odoo-hint gf-odoo-mb-0">
 				<?php

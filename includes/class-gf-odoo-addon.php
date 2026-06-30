@@ -773,29 +773,29 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			'requestFailed'        => esc_html__( 'Request failed. Please try again.', 'gf-odoo-connector' ),
 			'loadingTeams'         => esc_html__( 'Loading helpdesk teams…', 'gf-odoo-connector' ),
 			'teamsLoadError'       => esc_html__( 'Could not load helpdesk teams from Odoo.', 'gf-odoo-connector' ),
-			'selectHelpdeskTeam'   => esc_html__( '— Select a helpdesk team —', 'gf-odoo-connector' ),
-			'selectNone'           => esc_html__( '— None —', 'gf-odoo-connector' ),
+			'selectHelpdeskTeam'   => esc_html__( 'Select a helpdesk team', 'gf-odoo-connector' ),
+			'selectNone'           => esc_html__( 'None', 'gf-odoo-connector' ),
 			'loadingCrmOptions'    => esc_html__( 'Loading options from Odoo…', 'gf-odoo-connector' ),
 			'crmOptionsLoadError'  => esc_html__( 'Could not load options from Odoo.', 'gf-odoo-connector' ),
 			'loadingCrmAssignment' => esc_html__( 'Loading salespeople and teams…', 'gf-odoo-connector' ),
 			'crmAssignmentLoaded'  => esc_html__( 'Salespeople and teams loaded from Odoo.', 'gf-odoo-connector' ),
 			'crmAssignmentError'   => esc_html__( 'Could not load salespeople or teams from Odoo.', 'gf-odoo-connector' ),
-			'selectSalesTeam'      => esc_html__( '— Use global default —', 'gf-odoo-connector' ),
-			'selectSalesperson'    => esc_html__( '— Use global default —', 'gf-odoo-connector' ),
+			'selectSalesTeam'      => esc_html__( 'Use global default', 'gf-odoo-connector' ),
+			'selectSalesperson'    => esc_html__( 'Use global default', 'gf-odoo-connector' ),
 			'templateLinkSaved'    => esc_html__( 'Template linked successfully.', 'gf-odoo-connector' ),
 			'templateLinkPending'  => esc_html__(
-				'Template link queued. Click “Update Settings” below to save this feed — the template will be linked automatically.',
+				'Template link queued. Click “Update Settings” below to save this feed and the template will be linked automatically.',
 				'gf-odoo-connector'
 			),
 			'templateLinkFailed'   => esc_html__( 'Could not link the template.', 'gf-odoo-connector' ),
-			'selectField'          => esc_html__( '— Select a field —', 'gf-odoo-connector' ),
+			'selectField'          => esc_html__( 'Select a field', 'gf-odoo-connector' ),
 			'modeLabels'           => CRM_Field_Config::mode_labels(),
 			'crmFieldRows'         => array(),
 			'helpdeskFieldRows'    => array(),
 			'retrying'             => esc_html__( 'Retrying sync…', 'gf-odoo-connector' ),
 			'retrySuccess'         => esc_html__( 'Sync succeeded. Reloading…', 'gf-odoo-connector' ),
 			'retryFailed'          => esc_html__( 'Retry failed.', 'gf-odoo-connector' ),
-			'retryDueNow'          => esc_html__( 'Retry due now — waiting for cron…', 'gf-odoo-connector' ),
+			'retryDueNow'          => esc_html__( 'Retry due now, waiting for cron…', 'gf-odoo-connector' ),
 			'retryingIn'           => esc_html__( 'Retrying in %s', 'gf-odoo-connector' ),
 			'entrySyncNonce'       => wp_create_nonce( 'gf_odoo_entry_sync' ),
 			'entrySyncing'         => esc_html__( 'Syncing to Odoo…', 'gf-odoo-connector' ),
@@ -1841,7 +1841,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 					)
 					: sprintf(
 						/* translators: %s: country input */
-						__( 'Could not resolve "%s" — not found in country map', 'gf-odoo-connector' ),
+						__( 'Could not resolve "%s": not found in country map', 'gf-odoo-connector' ),
 						$input
 					),
 			)
@@ -2517,7 +2517,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 								'gf-odoo-connector'
 							),
 							esc_html__(
-								'Example confirmation redirect: thank-you/?entry_id={entry_id} — the shortcode reads entry_id from the URL automatically.',
+								'Example confirmation redirect: thank-you/?entry_id={entry_id}. The shortcode reads entry_id from the URL automatically.',
 								'gf-odoo-connector'
 							)
 						),
@@ -2552,7 +2552,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 						'name'     => 'crm_user_id',
 						'label'    => esc_html__( 'Salesperson', 'gf-odoo-connector' ),
 						'type'     => 'select',
-						'choices'  => $this->get_crm_user_field_choices( esc_html__( '— Use global default —', 'gf-odoo-connector' ) ),
+						'choices'  => $this->get_crm_user_field_choices( esc_html__( 'Use global default', 'gf-odoo-connector' ) ),
 						'class'    => 'gf-odoo-crm-user-select medium',
 						'description'  => esc_html__(
 							'Override the global default salesperson for this form. Choosing a salesperson also sets their default sales team (you can change the team below). Leave on “Use global default” to inherit the site-wide setting.',
@@ -2563,7 +2563,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 						'name'     => 'crm_team_id',
 						'label'    => esc_html__( 'Sales Team', 'gf-odoo-connector' ),
 						'type'     => 'select',
-						'choices'  => $this->get_crm_team_field_choices( esc_html__( '— Use global default —', 'gf-odoo-connector' ) ),
+						'choices'  => $this->get_crm_team_field_choices( esc_html__( 'Use global default', 'gf-odoo-connector' ) ),
 						'class'    => 'gf-odoo-crm-team-select medium',
 						'description'  => esc_html__(
 							'Override the global default sales team for this form. Leave on “Use global default” to inherit the site-wide setting.',
@@ -2679,7 +2679,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			return esc_html__( 'Odoo Helpdesk', 'gf-odoo-connector' );
 		}
 
-		return $module ? esc_html( (string) $module ) : '—';
+		return $module ? esc_html( (string) $module ) : '-';
 	}
 
 	/**
@@ -2771,7 +2771,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 
 			return $result;
 		} catch ( Exception $e ) {
-			$this->log_error( 'GF Odoo Connector: could not load CRM assignment lists — ' . $e->getMessage() );
+			$this->log_error( 'GF Odoo Connector: could not load CRM assignment lists: ' . $e->getMessage() );
 			return $empty;
 		}
 	}
@@ -2794,7 +2794,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	private function get_crm_team_field_choices( string $empty_label = '' ): array {
 		$choices = array(
 			array(
-				'label' => '' !== $empty_label ? $empty_label : esc_html__( '— Select a sales team —', 'gf-odoo-connector' ),
+				'label' => '' !== $empty_label ? $empty_label : esc_html__( 'Select a sales team', 'gf-odoo-connector' ),
 				'value' => '',
 			),
 		);
@@ -2831,7 +2831,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	private function get_crm_user_field_choices( string $empty_label = '' ): array {
 		$choices = array(
 			array(
-				'label' => '' !== $empty_label ? $empty_label : esc_html__( '— Unassigned —', 'gf-odoo-connector' ),
+				'label' => '' !== $empty_label ? $empty_label : esc_html__( 'Unassigned', 'gf-odoo-connector' ),
 				'value' => '',
 			),
 		);
@@ -2862,7 +2862,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	private function get_helpdesk_team_field_choices(): array {
 		$choices = array(
 			array(
-				'label' => esc_html__( '— Select a helpdesk team —', 'gf-odoo-connector' ),
+				'label' => esc_html__( 'Select a helpdesk team', 'gf-odoo-connector' ),
 				'value' => '',
 			),
 		);
@@ -2919,7 +2919,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 
 			return $teams;
 		} catch ( Exception $e ) {
-			$this->log_error( 'GF Odoo Connector: could not load helpdesk teams — ' . $e->getMessage() );
+			$this->log_error( 'GF Odoo Connector: could not load helpdesk teams: ' . $e->getMessage() );
 			return array();
 		}
 	}
@@ -3383,7 +3383,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			);
 			$html    .= sprintf(
 				'<option value="">%s</option>',
-				esc_html__( '— Select a sample form above —', 'gf-odoo-connector' )
+				esc_html__( 'Select a sample form above', 'gf-odoo-connector' )
 			);
 			if ( '' !== $selected ) {
 				$html .= sprintf(
@@ -3437,7 +3437,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 
 		$html .= sprintf(
 			'<option value="">%s</option>',
-			esc_html__( '— Select a field —', 'gf-odoo-connector' )
+			esc_html__( 'Select a field', 'gf-odoo-connector' )
 		);
 
 		$selected_in_choices = false;
@@ -3527,7 +3527,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		);
 		$html .= sprintf(
 			'<option value="">%s</option>',
-			esc_html__( '— None —', 'gf-odoo-connector' )
+			esc_html__( 'None', 'gf-odoo-connector' )
 		);
 
 		foreach ( (array) rgar( $row, 'fixed_choices', array() ) as $choice ) {
@@ -3561,7 +3561,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			$this->render_setting_control_name( $name_attr, $include_in_post ),
 			esc_attr( (string) rgar( $row, 'ajax_action', '' ) ),
 			esc_attr( (string) rgar( $row, 'parent_key', '' ) ),
-			esc_html__( '— None —', 'gf-odoo-connector' ),
+			esc_html__( 'None', 'gf-odoo-connector' ),
 			$selected > 0 || '' !== $selected
 				? sprintf( '<option value="%1$s" selected="selected">#%1$s</option>', esc_attr( $selected ) )
 				: ''
@@ -4434,7 +4434,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		$existing = $this->get_connection_settings();
 		$merged   = array_merge( $existing, $incoming );
 
-		// HTML-only fields are not real settings — never persist them.
+		// HTML-only fields are not real settings, so never persist them.
 		$ui_only_keys = array(
 			'connection_status',
 			'test_connection',
@@ -4997,7 +4997,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		$lead_data    = (array) rgar( $payload, 'lead', array() );
 
 		$this->log_debug(
-			'CRM payload — partner: ' . wp_json_encode( $contact_data ) . ' lead: ' . wp_json_encode( $lead_data )
+			'CRM payload, partner: ' . wp_json_encode( $contact_data ) . ' lead: ' . wp_json_encode( $lead_data )
 		);
 
 		$crm        = new CRM_Handler( $api );
@@ -5042,7 +5042,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 
 		$this->log_debug(
 			sprintf(
-				'CRM feed #%d processed for entry #%d — partner #%d, lead #%d.',
+				'CRM feed #%d processed for entry #%d: partner #%d, lead #%d.',
 				$feed_id,
 				$entry_id,
 				$partner_id,
@@ -5097,7 +5097,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 
 		$this->log_debug(
 			sprintf(
-				'Helpdesk feed #%d processed for entry #%d — ticket #%d.',
+				'Helpdesk feed #%d processed for entry #%d: ticket #%d.',
 				$feed_id,
 				$entry_id,
 				$ticket_id
@@ -5180,7 +5180,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		}
 
 		$lines = array(
-			__( 'Odoo sync — field values sent:', 'gf-odoo-connector' ),
+			__( 'Odoo sync, field values sent:', 'gf-odoo-connector' ),
 		);
 
 		foreach ( $sections as $title => $fields ) {
@@ -5397,7 +5397,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 				esc_html( (string) ( $row['time'] ?? '' ) ),
 				esc_html( (string) ( $row['model'] ?? '' ) ),
 				absint( $row['odoo_id'] ?? 0 ),
-				esc_html( ! empty( $entries ) ? implode( ', ', $entries ) : '—' ),
+				esc_html( ! empty( $entries ) ? implode( ', ', $entries ) : '-' ),
 				esc_html( (string) ( $row['status'] ?? '' ) )
 			);
 		}
@@ -6062,7 +6062,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	 */
 	public function get_form_title_for_dashboard( int $form_id ): string {
 		if ( $form_id <= 0 || ! class_exists( 'GFAPI' ) ) {
-			return '—';
+			return '-';
 		}
 
 		$form = GFAPI::get_form( $form_id );
@@ -6320,7 +6320,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		$odoo_url = untrailingslashit( (string) rgar( $this->get_connection_settings(), 'odoo_url' ) );
 
 		if ( '' === $status ) {
-			return '<span style="color:#aaa">—</span>';
+			return '<span style="color:#aaa">-</span>';
 		}
 
 		$icons = array(
@@ -6835,7 +6835,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		}
 
 		if ( '' === $this->get_api_key() ) {
-			$missing[] = __( 'API key — open Connection & API, paste the key, click Test Connection, then Save Settings', 'gf-odoo-connector' );
+			$missing[] = __( 'API key: open Connection & API, paste the key, click Test Connection, then Save Settings', 'gf-odoo-connector' );
 		}
 
 		if ( empty( $missing ) ) {
@@ -7404,7 +7404,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			: 0;
 
 		$templates = class_exists( 'Template_Manager' ) ? Template_Manager::get_all() : array();
-		$options   = '<option value="0">' . esc_html__( '— No template —', 'gf-odoo-connector' ) . '</option>';
+		$options   = '<option value="0">' . esc_html__( 'No template', 'gf-odoo-connector' ) . '</option>';
 
 		foreach ( $templates as $template ) {
 			if ( (string) $template->module !== $module ) {
@@ -7441,7 +7441,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			$feed_id,
 			esc_attr( $module ),
 			checked( ! $use_template, true, false ),
-			esc_html__( 'No template — own configuration', 'gf-odoo-connector' ),
+			esc_html__( 'No template (own configuration)', 'gf-odoo-connector' ),
 			checked( $use_template, true, false ),
 			esc_html__( 'Use template:', 'gf-odoo-connector' ),
 			$use_template ? '' : ' disabled',
@@ -8201,7 +8201,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			$link      = $this->get_dashboard_odoo_record_link( $module, $lead_id, $ticket_id );
 			$record    = $link
 				? sprintf( '<a href="%1$s" target="_blank" rel="noopener noreferrer">#%2$d</a>', esc_url( $link['url'] ), (int) $link['id'] )
-				: '—';
+				: '-';
 			$badge     = 'helpdesk' === $module ? 'badge-helpdesk' : 'badge-crm';
 			$mod_label = 'helpdesk' === $module
 				? esc_html__( 'Helpdesk', 'gf-odoo-connector' )

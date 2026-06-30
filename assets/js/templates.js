@@ -98,7 +98,7 @@
 		var cfg = adminConfig();
 		var html =
 			'<option value="">' +
-			( cfg && cfg.selectField ? cfg.selectField : '— Select a field —' ) +
+			( cfg && cfg.selectField ? cfg.selectField : 'Select a field' ) +
 			'</option>';
 
 		var hasSelected = false;
@@ -457,7 +457,7 @@
 			var line =
 				'✓ ' +
 				field.odoo_label +
-				' — "' +
+				': "' +
 				templateLabel +
 				'"';
 			if ( field.target_field_id ) {
@@ -490,7 +490,7 @@
 					key +
 					'"><span class="gf-odoo-remap-unmatched-label">✗ ' +
 					( field.field_label_in_template || key ) +
-					' — "' +
+					': "' +
 					templateLabel +
 					'" ' +
 					( cfg.remapNotFound || 'not found in this form' ) +
@@ -532,7 +532,7 @@
 		$.each( fields, function ( key, field ) {
 			var templateLabel =
 				field.template_field_label ||
-				( field.template_field_id ? 'field ' + field.template_field_id : '—' );
+				( field.template_field_id ? 'field ' + field.template_field_id : '-' );
 			var selected = field.target_field_id || remapState.fieldRemaps[ key ] || '';
 
 			if ( selected ) {
