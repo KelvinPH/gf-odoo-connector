@@ -18,18 +18,29 @@ if ( ! defined( 'ABSPATH' ) ) {
 class GF_Odoo_Industry_Map {
 
     /**
-     * Industry name (lowercase) => Odoo ID
+     * Industry name (lowercase) => Odoo ID (res.partner.industry).
      */
     private static array $map = [
-        'education & research' => 34,
-        'enterprise'           => 38,
-        'fitness & sports'     => 35,
-        'government & public'  => 37,
-        'medical'              => 33,
-        'odm'                  => 40,
-        'online'               => 41,
-        'professional sports'  => 36,
-        'wellness & beauty'    => 39,
+        'corporate & enterprise' => 38,
+        'education & research'    => 34,
+        'fitness & sports'        => 35,
+        'government & public'     => 37,
+        'medical'                 => 33,
+        'others'                  => 43,
+        'paramedical'             => 42,
+        'professional sports'     => 36,
+        'wellness & beauty'       => 39,
+    ];
+
+    /**
+     * Legacy / shorthand label aliases mapped to the canonical Odoo ID.
+     *
+     * Kept separate from $map so they resolve correctly without polluting the
+     * dropdown built by get_all().
+     */
+    private static array $aliases = [
+        'enterprise' => 38,
+        'other'      => 43,
     ];
 
     /**
@@ -48,7 +59,7 @@ class GF_Odoo_Industry_Map {
      */
     public static function resolve( string $input ): ?int {
         $key = strtolower( trim( $input ) );
-        return self::$map[ $key ] ?? null;
+        return self::$map[ $key ] ?? self::$aliases[ $key ] ?? null;
     }
 
     /**
