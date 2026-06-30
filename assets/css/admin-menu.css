@@ -14,21 +14,9 @@
 	color: #e0e0f0;
 }
 
-#adminmenu #toplevel_page_gf_odoo_dashboard .wp-submenu li.gf-odoo-nav-label > a,
-#adminmenu #toplevel_page_gf_odoo_dashboard .wp-submenu li.gf-odoo-nav-label > a:hover {
-	font-size: 9px;
-	font-weight: 700;
-	letter-spacing: 0.1em;
-	text-transform: uppercase;
-	color: rgba(255, 255, 255, 0.3) !important;
-	cursor: default;
-	pointer-events: none;
-	padding-top: 14px;
-	padding-bottom: 2px;
-}
-
-#adminmenu #toplevel_page_gf_odoo_dashboard a[href$="gf_odoo_about"] {
-	border-top: 1px solid rgba(255, 255, 255, 0.08);
-	margin-top: 8px;
-	padding-top: 8px;
+/* Subtle divider line above the first item of each menu group. */
+#adminmenu #toplevel_page_gf_odoo_dashboard .wp-submenu li.gf-odoo-nav-divider {
+	margin-top: 9px;
+	padding-top: 9px;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
 }

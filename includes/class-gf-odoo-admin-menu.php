@@ -37,9 +37,8 @@ class GF_Odoo_Admin_Menu {
 	 */
 	public function init(): void {
 		add_action( 'admin_menu', array( $this, 'register_menu' ), 97 );
-		add_action( 'admin_init', array( $this, 'redirect_label_menu_pages' ) );
 		add_action( 'admin_init', array( $this, 'maybe_redirect_setup_wizard' ) );
-		add_action( 'admin_head', array( $this, 'admin_menu_label_script' ) );
+		add_action( 'admin_head', array( $this, 'admin_menu_divider_script' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_menu_styles' ) );
 	}
 
@@ -90,26 +89,7 @@ class GF_Odoo_Admin_Menu {
 	}
 
 	/**
-	 * Section labels are not real pages, so send direct visits back to the dashboard.
-	 */
-	public function redirect_label_menu_pages(): void {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$page = isset( $_GET['page'] ) ? sanitize_key( (string) $_GET['page'] ) : '';
-
-		$labels = array(
-			'gf_odoo_label_settings',
-			'gf_odoo_label_templates',
-			'gf_odoo_label_logs',
-		);
-
-		if ( in_array( $page, $labels, true ) ) {
-			wp_safe_redirect( self::url( self::PARENT_SLUG ) );
-			exit;
-		}
-	}
-
-	/**
-	 * Submenu label styling (all wp-admin screens).
+	 * Submenu styling (all wp-admin screens).
 	 */
 	public function enqueue_admin_menu_styles(): void {
 		wp_enqueue_style(
@@ -121,24 +101,22 @@ class GF_Odoo_Admin_Menu {
 	}
 
 	/**
-	 * Mark non-clickable section labels in the WordPress admin menu.
+	 * Add a divider line above the first item of each menu group.
 	 */
-	public function admin_menu_label_script(): void {
+	public function admin_menu_divider_script(): void {
 		?>
 		<script>
 		document.addEventListener('DOMContentLoaded', function() {
 			document.querySelectorAll(
-				'#adminmenu a[href*="page=gf_odoo_label_settings"],' +
-				'#adminmenu a[href*="page=gf_odoo_label_templates"],' +
-				'#adminmenu a[href*="page=gf_odoo_label_logs"]'
+				'#adminmenu #toplevel_page_gf_odoo_dashboard a[href*="page=gf_odoo_settings"],' +
+				'#adminmenu #toplevel_page_gf_odoo_dashboard a[href*="page=gf_odoo_history"],' +
+				'#adminmenu #toplevel_page_gf_odoo_dashboard a[href*="page=gf_odoo_testing"],' +
+				'#adminmenu #toplevel_page_gf_odoo_dashboard a[href*="page=gf_odoo_about"]'
 			).forEach(function(a) {
 				var li = a.closest('li');
 				if (li) {
-					li.classList.add('gf-odoo-nav-label');
+					li.classList.add('gf-odoo-nav-divider');
 				}
-				a.addEventListener('click', function(e) {
-					e.preventDefault();
-				});
 			});
 		});
 		</script>
@@ -162,15 +140,17 @@ class GF_Odoo_Admin_Menu {
 			58
 		);
 
+		// Primary: everyday work.
 		add_submenu_page(
 			self::PARENT_SLUG,
-			'',
-			strtoupper( __( 'Settings', 'gf-odoo-connector' ) ),
+			__( 'Feed templates', 'gf-odoo-connector' ),
+			__( 'Feed templates', 'gf-odoo-connector' ),
 			$cap,
-			'gf_odoo_label_settings',
-			'__return_false'
+			'gf_odoo_templates',
+			array( $addon, 'render_templates_page' )
 		);
 
+		// Configuration.
 		add_submenu_page(
 			self::PARENT_SLUG,
 			__( 'Connection & API', 'gf-odoo-connector' ),
@@ -198,6 +178,35 @@ class GF_Odoo_Admin_Menu {
 			array( $addon, 'render_webhook_settings_page' )
 		);
 
+		// Activity / monitoring.
+		add_submenu_page(
+			self::PARENT_SLUG,
+			__( 'Sync history', 'gf-odoo-connector' ),
+			__( 'Sync history', 'gf-odoo-connector' ),
+			$cap,
+			'gf_odoo_history',
+			array( $addon, 'render_sync_history_page' )
+		);
+
+		add_submenu_page(
+			self::PARENT_SLUG,
+			__( 'Error log', 'gf-odoo-connector' ),
+			__( 'Error log', 'gf-odoo-connector' ),
+			$cap,
+			'gf_odoo_errors',
+			array( $addon, 'render_error_log_page' )
+		);
+
+		add_submenu_page(
+			self::PARENT_SLUG,
+			__( 'Webhook log', 'gf-odoo-connector' ),
+			__( 'Webhook log', 'gf-odoo-connector' ),
+			$cap,
+			'gf_odoo_webhook_log',
+			array( $addon, 'render_webhook_log_page' )
+		);
+
+		// Tools.
 		add_submenu_page(
 			self::PARENT_SLUG,
 			__( 'Testing tools', 'gf-odoo-connector' ),
@@ -216,60 +225,7 @@ class GF_Odoo_Admin_Menu {
 			array( $addon, 'render_checklist_page' )
 		);
 
-		add_submenu_page(
-			self::PARENT_SLUG,
-			'',
-			strtoupper( __( 'Templates', 'gf-odoo-connector' ) ),
-			$cap,
-			'gf_odoo_label_templates',
-			'__return_false'
-		);
-
-		add_submenu_page(
-			self::PARENT_SLUG,
-			__( 'Feed templates', 'gf-odoo-connector' ),
-			__( 'Feed templates', 'gf-odoo-connector' ),
-			$cap,
-			'gf_odoo_templates',
-			array( $addon, 'render_templates_page' )
-		);
-
-		add_submenu_page(
-			self::PARENT_SLUG,
-			'',
-			strtoupper( __( 'Logs', 'gf-odoo-connector' ) ),
-			$cap,
-			'gf_odoo_label_logs',
-			'__return_false'
-		);
-
-		add_submenu_page(
-			self::PARENT_SLUG,
-			__( 'Error log', 'gf-odoo-connector' ),
-			__( 'Error log', 'gf-odoo-connector' ),
-			$cap,
-			'gf_odoo_errors',
-			array( $addon, 'render_error_log_page' )
-		);
-
-		add_submenu_page(
-			self::PARENT_SLUG,
-			__( 'Sync history', 'gf-odoo-connector' ),
-			__( 'Sync history', 'gf-odoo-connector' ),
-			$cap,
-			'gf_odoo_history',
-			array( $addon, 'render_sync_history_page' )
-		);
-
-		add_submenu_page(
-			self::PARENT_SLUG,
-			__( 'Webhook log', 'gf-odoo-connector' ),
-			__( 'Webhook log', 'gf-odoo-connector' ),
-			$cap,
-			'gf_odoo_webhook_log',
-			array( $addon, 'render_webhook_log_page' )
-		);
-
+		// Reference.
 		add_submenu_page(
 			self::PARENT_SLUG,
 			__( 'About', 'gf-odoo-connector' ),
