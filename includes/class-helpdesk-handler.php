@@ -233,7 +233,16 @@ class Helpdesk_Handler {
 	 */
 	public function create_ticket( array $data ): int {
 		$allowed = Helpdesk_Field_Config::ticket_field_names();
-		$data    = $this->filter_fields( $data, $allowed );
+
+		// Allow Odoo custom fields (always x_ prefixed) so smart routing can
+		// target instance-specific fields such as a custom "Issue Description".
+		foreach ( array_keys( $data ) as $field_key ) {
+			if ( is_string( $field_key ) && 0 === strpos( $field_key, 'x_' ) ) {
+				$allowed[] = $field_key;
+			}
+		}
+
+		$data = $this->filter_fields( $data, $allowed );
 
 		if ( empty( $data['name'] ) ) {
 			throw new InvalidArgumentException(

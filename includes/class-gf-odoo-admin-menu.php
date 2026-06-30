@@ -178,6 +178,15 @@ class GF_Odoo_Admin_Menu {
 			array( $addon, 'render_webhook_settings_page' )
 		);
 
+		add_submenu_page(
+			self::PARENT_SLUG,
+			__( 'Smart routing (Beta)', 'gf-odoo-connector' ),
+			__( 'Smart routing (Beta)', 'gf-odoo-connector' ),
+			$cap,
+			'gf_odoo_smart_routing',
+			array( $addon, 'render_smart_routing_page' )
+		);
+
 		// Activity / monitoring.
 		add_submenu_page(
 			self::PARENT_SLUG,
@@ -278,6 +287,7 @@ class GF_Odoo_Admin_Menu {
 			'gf_odoo_settings',
 			'gf_odoo_notifications',
 			'gf_odoo_webhook',
+			'gf_odoo_smart_routing',
 			'gf_odoo_testing',
 			'gf_odoo_checklist',
 			'gf_odoo_templates',

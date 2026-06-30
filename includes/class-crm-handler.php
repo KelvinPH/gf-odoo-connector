@@ -207,6 +207,13 @@ class CRM_Handler {
 		$partner      = (array) rgar( $context, 'partner', array() );
 		$form_title   = trim( (string) rgar( $context, 'form_title', '' ) );
 
+		// Smart routing tags (names) are resolved to crm.tag IDs below; not a real lead field.
+		$smart_tag_names = array();
+		if ( ! empty( $data['smart_tag_names'] ) && is_array( $data['smart_tag_names'] ) ) {
+			$smart_tag_names = $data['smart_tag_names'];
+		}
+		unset( $data['smart_tag_names'] );
+
 		if ( ! empty( $data['source_id'] ) && ! is_numeric( $data['source_id'] ) ) {
 			$data['source_id'] = $this->find_or_create_source( (string) $data['source_id'] );
 		}
@@ -283,7 +290,78 @@ class CRM_Handler {
 		$data['name']       = $lead_title;
 		$data['partner_id'] = $partner_id;
 
+		if ( ! empty( $smart_tag_names ) ) {
+			$tag_ids = array();
+
+			foreach ( $smart_tag_names as $tag_name ) {
+				$tag_id = $this->find_or_create_tag( (string) $tag_name );
+
+				if ( $tag_id > 0 ) {
+					$tag_ids[] = $tag_id;
+				}
+			}
+
+			if ( ! empty( $tag_ids ) ) {
+				$data['tag_ids'] = array( array( 6, 0, array_values( array_unique( $tag_ids ) ) ) );
+			}
+		}
+
 		return $data;
+	}
+
+	/**
+	 * Resolve a CRM tag name to its ID, creating the tag when missing.
+	 *
+	 * @param string $name Tag name.
+	 *
+	 * @return int Tag ID, or 0 on failure.
+	 */
+	public function find_or_create_tag( string $name ): int {
+		$name = trim( $name );
+
+		if ( '' === $name ) {
+			return 0;
+		}
+
+		$cache_key = 'gf_odoo_crmtag_' . md5( strtolower( $name ) );
+		$cached    = get_transient( $cache_key );
+
+		if ( false !== $cached && (int) $cached > 0 ) {
+			return (int) $cached;
+		}
+
+		try {
+			$ids = $this->api->call(
+				'crm.tag',
+				'search',
+				array(
+					array(
+						array( 'name', '=', $name ),
+					),
+				),
+				array(
+					'limit' => 1,
+				)
+			);
+
+			if ( ! empty( $ids[0] ) ) {
+				$id = (int) $ids[0];
+				set_transient( $cache_key, $id, HOUR_IN_SECONDS );
+				return $id;
+			}
+
+			$id = $this->extract_record_id(
+				$this->api->call( 'crm.tag', 'create', array( array( 'name' => $name ) ) )
+			);
+
+			if ( $id > 0 ) {
+				set_transient( $cache_key, $id, HOUR_IN_SECONDS );
+			}
+
+			return $id;
+		} catch ( Exception $e ) {
+			return 0;
+		}
 	}
 
 	/**

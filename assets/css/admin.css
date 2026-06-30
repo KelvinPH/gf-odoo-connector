@@ -562,6 +562,114 @@
 	color: #64748b;
 }
 
+.badge-skipped,
+.gf-odoo-sync-badge--skipped {
+	background: #f1f5f9;
+	color: #475569;
+}
+
+/* Smart routing (Beta) settings */
+.gf-odoo-beta-notice {
+	border-left: 4px solid #f59e0b;
+	background: #fffbeb;
+	color: #92400e;
+	padding: 12px 16px;
+	margin: 0 0 8px;
+	border-radius: 4px;
+	line-height: 1.5;
+}
+
+.gf-odoo-subheading {
+	margin: 8px 0 4px;
+	padding-top: 12px;
+	border-top: 1px solid #e2e8f0;
+	font-size: 14px;
+}
+
+/* "How it works" flow strip */
+.gf-odoo-flow {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: stretch;
+	gap: 4px;
+	margin: 4px 0 16px;
+}
+
+.gf-odoo-flow__step {
+	flex: 1 1 0;
+	min-width: 150px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 14px 12px;
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	text-align: center;
+}
+
+.gf-odoo-flow__icon {
+	font-size: 22px;
+	width: 22px;
+	height: 22px;
+	margin: 0 auto;
+	color: #2563eb;
+}
+
+.gf-odoo-flow__title {
+	font-weight: 600;
+	font-size: 13px;
+	color: #1e293b;
+}
+
+.gf-odoo-flow__text {
+	font-size: 12px;
+	line-height: 1.45;
+	color: #64748b;
+}
+
+.gf-odoo-flow__arrow {
+	align-self: center;
+	color: #cbd5e1;
+	font-size: 20px;
+}
+
+@media (max-width: 782px) {
+	.gf-odoo-flow {
+		flex-direction: column;
+	}
+
+	.gf-odoo-flow__arrow {
+		transform: rotate(90deg);
+	}
+}
+
+/* Inline note (e.g. AI privacy) */
+.gf-odoo-note {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 12px 14px;
+	border-radius: 8px;
+	line-height: 1.5;
+	margin: 0 0 8px;
+}
+
+.gf-odoo-note .dashicons {
+	flex: 0 0 auto;
+	margin-top: 1px;
+}
+
+.gf-odoo-note--info {
+	background: #eff6ff;
+	border: 1px solid #bfdbfe;
+	color: #1e40af;
+}
+
+.gf-odoo-note--info .dashicons {
+	color: #2563eb;
+}
+
 /* === 9. Tables === */
 
 .gf-odoo-table,

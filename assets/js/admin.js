@@ -192,6 +192,48 @@
 			} );
 	} );
 
+	$( document ).on( 'click', '#gf-odoo-test-ai', function ( e ) {
+		e.preventDefault();
+
+		if ( typeof gfOdooAdmin === 'undefined' ) {
+			return;
+		}
+
+		var $button = $( this );
+		var $result = $( '#gf-odoo-test-ai-result' );
+		var sample = $.trim( $( '#gf-odoo-ai-test-sample' ).val() || '' );
+
+		function show( message, isError ) {
+			$result
+				.text( message )
+				.css( 'color', isError ? '#d63638' : '#00a32a' )
+				.show();
+		}
+
+		$button.prop( 'disabled', true );
+		show( gfOdooAdmin.aiTesting || 'Testing AI…', false );
+
+		$.post( gfOdooAdmin.ajaxUrl, {
+			action: 'gf_odoo_test_ai',
+			nonce: gfOdooAdmin.aiTestNonce,
+			sample: sample,
+		} )
+			.done( function ( response ) {
+				var message =
+					response && response.data && response.data.message
+						? response.data.message
+						: gfOdooAdmin.unknownError;
+
+				show( message, ! ( response && response.success ) );
+			} )
+			.fail( function () {
+				show( gfOdooAdmin.requestFailed, true );
+			} )
+			.always( function () {
+				$button.prop( 'disabled', false );
+			} );
+	} );
+
 	function getGfSettingSelector( name ) {
 		return '[name="_gform_setting_' + name + '"], [name="_gaddon_setting_' + name + '"]';
 	}

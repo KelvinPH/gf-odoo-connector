@@ -2,6 +2,15 @@
 
 All notable changes to GF Odoo Connector are documented here.
 
+## [1.3.0] - 2026-06-30
+
+### Added
+
+- Smart lead routing (Beta): optionally classify generic contact-form submissions and route them automatically to CRM (sales), Helpdesk (support), or skip vendor/spam, with a "needs review" fallback when unsure. Enable per feed under the form's Odoo feed settings.
+- Hybrid engine: instant, offline keyword scoring decides the obvious cases (obvious spam never leaves the site), and an optional EU-friendly AI (Mistral by default, or a custom OpenAI-compatible endpoint such as Azure OpenAI in an EU region) resolves only the uncertain cases. The AI runs in the background worker, so form submissions stay instant, and falls back to keywords whenever it is disabled or unavailable.
+- New "Smart routing (Beta)" settings page: master on/off switch (off by default), Off/Log only/Enforce mode (defaults to Log only), engine choice, editable EN/NL/DE/FR keyword lists, spam thresholds, blocked email domains, default Helpdesk team, and needs-review / web-lead tag names. The AI API key is stored encrypted.
+- Entry notes now record each routing decision (engine, bucket, matched keywords or AI reason), and a new "Skipped (smart routing)" sync status marks vendor/spam entries that were intentionally not synced.
+
 ## [1.2.1] - 2026-06-30
 
 ### Changed

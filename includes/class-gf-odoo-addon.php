@@ -62,6 +62,11 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	private const OPTION_API_KEY = 'gf_odoo_api_key';
 
 	/**
+	 * wp_options key for the Smart routing AI API key (stored encrypted, never in GF settings).
+	 */
+	private const OPTION_AI_API_KEY = 'gf_odoo_ai_api_key';
+
+	/**
 	 * Message from the most recent process_sync_job() failure (for manual retry UI).
 	 *
 	 * @var string
@@ -603,6 +608,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		$this->init_testing_admin();
 
 		add_action( 'wp_ajax_gf_odoo_test_connection', array( $this, 'ajax_test_connection' ) );
+		add_action( 'wp_ajax_gf_odoo_test_ai', array( $this, 'ajax_test_ai' ) );
 		add_action( 'wp_ajax_gf_odoo_get_teams', array( $this, 'ajax_get_teams' ) );
 		add_action( 'wp_ajax_gf_odoo_get_industries', array( $this, 'ajax_get_industries' ) );
 		add_action( 'wp_ajax_gf_odoo_get_sub_industries', array( $this, 'ajax_get_sub_industries' ) );
@@ -764,6 +770,8 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		$data = array(
 			'ajaxUrl'              => admin_url( 'admin-ajax.php' ),
 			'nonce'                => wp_create_nonce( 'gf_odoo_test_connection' ),
+			'aiTestNonce'          => wp_create_nonce( 'gf_odoo_test_ai' ),
+			'aiTesting'            => esc_html__( 'Testing AI…', 'gf-odoo-connector' ),
 			'odooNonce'            => wp_create_nonce( 'gf_odoo_nonce' ),
 			'teamsNonce'           => wp_create_nonce( 'gf_odoo_get_teams' ),
 			'retryNonce'           => wp_create_nonce( 'gf_odoo_retry' ),
@@ -1011,7 +1019,92 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			$settings['api_key'] = $this->get_masked_api_key();
 		}
 
+		if ( '' !== $this->get_ai_key() ) {
+			$settings['smart_routing_ai_key'] = $this->get_masked_ai_key();
+		}
+
 		return $settings;
+	}
+
+	/**
+	 * Decrypted Smart routing AI API key.
+	 *
+	 * @return string
+	 */
+	public function get_ai_key(): string {
+		$stored = (string) get_option( self::OPTION_AI_API_KEY, '' );
+
+		if ( '' === $stored ) {
+			return '';
+		}
+
+		if ( ! class_exists( 'GF_Odoo_Encryption' ) ) {
+			return trim( $stored );
+		}
+
+		return trim( GF_Odoo_Encryption::decrypt( $stored ) );
+	}
+
+	/**
+	 * Store the AI API key, encrypted when possible.
+	 *
+	 * @param string $key Raw key.
+	 */
+	private function store_ai_key( string $key ): void {
+		$key = trim( $key );
+
+		if ( '' === $key ) {
+			return;
+		}
+
+		$to_store = $key;
+
+		if ( class_exists( 'GF_Odoo_Encryption' ) && GF_Odoo_Encryption::is_available() ) {
+			$encrypted = GF_Odoo_Encryption::encrypt( $key );
+			if ( '' !== $encrypted ) {
+				$to_store = $encrypted;
+			}
+		}
+
+		update_option( self::OPTION_AI_API_KEY, $to_store, false );
+	}
+
+	/**
+	 * Masked placeholder for the AI key field.
+	 *
+	 * @return string
+	 */
+	private function get_masked_ai_key(): string {
+		$key = $this->get_ai_key();
+
+		if ( '' === $key ) {
+			return '';
+		}
+
+		return str_repeat( '•', min( strlen( $key ), 40 ) );
+	}
+
+	/**
+	 * Whether a submitted AI key value is the masked placeholder (unchanged).
+	 *
+	 * @param string $value Raw input.
+	 *
+	 * @return bool
+	 */
+	private function is_masked_ai_key( string $value ): bool {
+		$value = trim( $value );
+
+		if ( '' === $value ) {
+			return false;
+		}
+
+		if ( preg_match( '/^[\*•·\.]+$/u', $value ) ) {
+			return true;
+		}
+
+		$masked = $this->get_masked_ai_key();
+
+		return '' !== $masked && $value === $masked;
 	}
 
 	/**
@@ -1197,6 +1290,39 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		}
 
 		$this->set_connection_status( 'error', (string) $result['message'] );
+		wp_send_json_error( $result );
+	}
+
+	/**
+	 * AJAX handler: send a sample message to the configured AI provider and
+	 * report whether classification works (Smart routing Beta "Test AI" button).
+	 */
+	public function ajax_test_ai() {
+		check_ajax_referer( 'gf_odoo_test_ai', 'nonce' );
+
+		if ( ! $this->current_user_can_manage_plugin() ) {
+			wp_send_json_error(
+				array( 'message' => esc_html__( 'Forbidden', 'gf-odoo-connector' ) ),
+				403
+			);
+		}
+
+		$config = $this->get_smart_routing_config();
+
+		// The Test button should work regardless of the live engine setting, as
+		// long as a key/endpoint exist; force the AI path on for the probe.
+		$config['ai_enabled'] = true;
+
+		$default_sample = esc_html__( 'Hello, we offer professional SEO and link building services and would like to discuss a partnership to improve your website ranking.', 'gf-odoo-connector' );
+		$sample         = isset( $_POST['sample'] ) ? sanitize_textarea_field( wp_unslash( (string) $_POST['sample'] ) ) : '';
+		$sample         = '' !== trim( $sample ) ? $sample : $default_sample;
+
+		$result = GF_Odoo_AI_Classifier::diagnose( $sample, $config );
+
+		if ( ! empty( $result['ok'] ) ) {
+			wp_send_json_success( $result );
+		}
+
 		wp_send_json_error( $result );
 	}
 
@@ -1500,6 +1626,23 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			'default_crm_user_id'        => '',
 			'default_crm_team_id'        => '',
 			'force_crm_assignment'       => '',
+			'smart_routing_enabled'      => '',
+			'smart_routing_mode'         => 'log',
+			'smart_routing_engine'       => 'hybrid',
+			'smart_routing_spam_keywords'    => implode( "\n", GF_Odoo_Lead_Classifier::default_spam_keywords() ),
+			'smart_routing_sales_keywords'   => implode( "\n", GF_Odoo_Lead_Classifier::default_sales_keywords() ),
+			'smart_routing_support_keywords' => implode( "\n", GF_Odoo_Lead_Classifier::default_support_keywords() ),
+			'smart_routing_blocked_domains'  => implode( "\n", GF_Odoo_Lead_Classifier::default_blocked_domains() ),
+			'smart_routing_max_links'        => '3',
+			'smart_routing_spam_threshold'   => '2',
+			'smart_routing_confidence_threshold' => '2',
+			'smart_routing_helpdesk_team_id' => '',
+			'smart_routing_helpdesk_desc_field' => 'description',
+			'smart_routing_review_tag'       => 'Needs review',
+			'smart_routing_web_lead_tag'     => '',
+			'smart_routing_ai_provider'      => 'mistral',
+			'smart_routing_ai_model'         => 'mistral-small-latest',
+			'smart_routing_ai_base_url'      => '',
 		);
 	}
 
@@ -1509,6 +1652,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	public function reset_plugin_settings_to_defaults(): void {
 		delete_option( 'gravityformsaddon_' . $this->get_slug() . '_settings' );
 		delete_option( self::OPTION_API_KEY );
+		delete_option( self::OPTION_AI_API_KEY );
 
 		$this->clear_all_plugin_transients();
 		$this->clear_assignment_cache();
@@ -2106,10 +2250,15 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			return $sections;
 		}
 
+		$section_count = count( $sections );
+
 		$map = array(
 			'connection'    => array( 0, 3 ),
 			'notifications' => array( 1 ),
 			'webhook'       => array( 2 ),
+			// Smart routing is split across several cards appended after the
+			// four core sections (indexes 0-3).
+			'smart_routing' => $section_count > 4 ? range( 4, $section_count - 1 ) : array(),
 		);
 
 		$indices = $map[ $this->admin_settings_page_filter ] ?? array();
@@ -2266,7 +2415,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			);
 		}
 
-		return array(
+		$sections = array(
 			array(
 				'title'       => esc_html__( 'Odoo Connection', 'gf-odoo-connector' ),
 				'description' => esc_html__(
@@ -2443,6 +2592,396 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 				),
 			),
 		);
+
+		return array_merge( $sections, $this->get_smart_routing_settings_sections() );
+	}
+
+	/**
+	 * Smart routing (Beta) settings, split into focused cards.
+	 *
+	 * @return array<int, array>
+	 */
+	private function get_smart_routing_settings_sections(): array {
+		$defaults = $this->get_default_plugin_settings();
+
+		$overview_section = array(
+			'title'       => esc_html__( 'Smart routing (Beta)', 'gf-odoo-connector' ),
+			'description' => esc_html__(
+				'Automatically read each contact-form submission and send it to the right place: a CRM lead (sales), a Helpdesk ticket (support), or skip it (vendor/spam).',
+				'gf-odoo-connector'
+			),
+			'fields'      => array(
+				array(
+					'name'  => 'smart_routing_beta_notice',
+					'label' => '',
+					'type'  => 'html',
+					'html'  => $this->get_smart_routing_beta_notice_markup(),
+				),
+				array(
+					'name'  => 'smart_routing_how_it_works',
+					'label' => '',
+					'type'  => 'html',
+					'html'  => $this->get_smart_routing_how_it_works_markup(),
+				),
+				array(
+					'name'    => 'smart_routing_enabled',
+					'label'   => esc_html__( 'Enable Smart Routing (Beta)', 'gf-odoo-connector' ),
+					'type'    => 'checkbox',
+					'tooltip' => esc_html__( 'Master switch for the whole site. When off, every feed behaves exactly as before. After turning this on, you also tick "Enable smart routing" on each form\'s Odoo feed.', 'gf-odoo-connector' ),
+					'choices' => array(
+						array(
+							'name'  => 'smart_routing_enabled',
+							'label' => esc_html__( 'Turn the smart routing feature on for this site', 'gf-odoo-connector' ),
+						),
+					),
+					'description' => esc_html__(
+						'Master switch. While off, all feeds behave exactly as before. You still need to enable smart routing on individual feeds.',
+						'gf-odoo-connector'
+					),
+				),
+				array(
+					'name'          => 'smart_routing_mode',
+					'label'         => esc_html__( 'Mode', 'gf-odoo-connector' ),
+					'type'          => 'select',
+					'default_value' => 'log',
+					'tooltip'       => esc_html__( 'Start with "Log only" to watch the decisions in entry notes without changing anything. Switch to "Enforce" once you trust the results.', 'gf-odoo-connector' ),
+					'choices'       => array(
+						array(
+							'label' => esc_html__( 'Off', 'gf-odoo-connector' ),
+							'value' => 'off',
+						),
+						array(
+							'label' => esc_html__( 'Log only (recommended first)', 'gf-odoo-connector' ),
+							'value' => 'log',
+						),
+						array(
+							'label' => esc_html__( 'Enforce (reroute submissions)', 'gf-odoo-connector' ),
+							'value' => 'enforce',
+						),
+					),
+					'description'   => esc_html__(
+						'Log only records the decision in an entry note without changing routing. Enforce applies the decision (skip spam, create CRM lead or Helpdesk ticket).',
+						'gf-odoo-connector'
+					),
+				),
+				array(
+					'name'          => 'smart_routing_engine',
+					'label'         => esc_html__( 'Engine', 'gf-odoo-connector' ),
+					'type'          => 'select',
+					'default_value' => 'hybrid',
+					'tooltip'       => esc_html__( 'Keyword only is free and instant. Hybrid additionally asks an AI to judge the messages keywords can\'t decide, for higher accuracy. The AI runs in the background, never slowing the form.', 'gf-odoo-connector' ),
+					'choices'       => array(
+						array(
+							'label' => esc_html__( 'Keyword only', 'gf-odoo-connector' ),
+							'value' => 'keyword',
+						),
+						array(
+							'label' => esc_html__( 'Hybrid (keyword + AI)', 'gf-odoo-connector' ),
+							'value' => 'hybrid',
+						),
+					),
+					'description'   => esc_html__(
+						'Keywords decide the obvious cases instantly. In Hybrid mode, uncertain cases are sent to the AI provider below (off the submission request). Keyword fallback always applies if the AI is unavailable.',
+						'gf-odoo-connector'
+					),
+				),
+			),
+		);
+
+		$keywords_section = array(
+			'title'       => esc_html__( 'Classification keywords', 'gf-odoo-connector' ),
+			'description' => esc_html__(
+				'These word lists drive the instant keyword decision. One term or phrase per line; matching is case-insensitive. Multiple languages are fine on the same list.',
+				'gf-odoo-connector'
+			),
+			'fields'      => array(
+				array(
+					'name'          => 'smart_routing_spam_keywords',
+					'label'         => esc_html__( 'Spam / vendor keywords', 'gf-odoo-connector' ),
+					'type'          => 'textarea',
+					'class'         => 'large',
+					'default_value' => $defaults['smart_routing_spam_keywords'],
+					'tooltip'       => esc_html__( 'Phrases typical of unsolicited sales pitches (SEO offers, link building, “partnership” spam). Strong matches let routing skip the submission entirely.', 'gf-odoo-connector' ),
+					'description'   => esc_html__( 'One term or phrase per line. Matched submissions can be skipped (not synced to Odoo).', 'gf-odoo-connector' ),
+				),
+				array(
+					'name'          => 'smart_routing_sales_keywords',
+					'label'         => esc_html__( 'Sales keywords', 'gf-odoo-connector' ),
+					'type'          => 'textarea',
+					'class'         => 'large',
+					'default_value' => $defaults['smart_routing_sales_keywords'],
+					'tooltip'       => esc_html__( 'Words that signal buying intent (price, quote, demo, distributor). Matches create a CRM lead.', 'gf-odoo-connector' ),
+					'description'   => esc_html__( 'One term or phrase per line. Matched submissions create a CRM lead.', 'gf-odoo-connector' ),
+				),
+				array(
+					'name'          => 'smart_routing_support_keywords',
+					'label'         => esc_html__( 'Support keywords', 'gf-odoo-connector' ),
+					'type'          => 'textarea',
+					'class'         => 'large',
+					'default_value' => $defaults['smart_routing_support_keywords'],
+					'tooltip'       => esc_html__( 'Words that signal an existing customer needs help (broken, repair, warranty, error). Matches create a Helpdesk ticket when a default team is set below.', 'gf-odoo-connector' ),
+					'description'   => esc_html__( 'One term or phrase per line. Matched submissions create a Helpdesk ticket (needs a default team below).', 'gf-odoo-connector' ),
+				),
+			),
+		);
+
+		$spam_section = array(
+			'title'       => esc_html__( 'Spam protection', 'gf-odoo-connector' ),
+			'description' => esc_html__(
+				'Extra signals that push a submission toward "spam". Each spam keyword, blocked domain, or excess link adds to a score; when the score reaches the threshold, the message is treated as spam.',
+				'gf-odoo-connector'
+			),
+			'fields'      => array(
+				array(
+					'name'          => 'smart_routing_blocked_domains',
+					'label'         => esc_html__( 'Blocked email domains', 'gf-odoo-connector' ),
+					'type'          => 'textarea',
+					'class'         => 'medium',
+					'default_value' => $defaults['smart_routing_blocked_domains'],
+					'tooltip'       => esc_html__( 'One domain per line. A sender from any of these domains gets a strong spam score boost.', 'gf-odoo-connector' ),
+					'description'   => esc_html__( 'One domain per line (e.g. mailinator.com). Submissions from these domains count strongly toward spam.', 'gf-odoo-connector' ),
+				),
+				array(
+					'name'          => 'smart_routing_max_links',
+					'label'         => esc_html__( 'Max links before spam', 'gf-odoo-connector' ),
+					'type'          => 'text',
+					'input_type'    => 'number',
+					'class'         => 'small',
+					'default_value' => '3',
+					'tooltip'       => esc_html__( 'Genuine enquiries rarely contain many URLs. Messages with more links than this gain spam score.', 'gf-odoo-connector' ),
+					'description'   => esc_html__( 'Messages with more links than this are nudged toward spam.', 'gf-odoo-connector' ),
+				),
+				array(
+					'name'          => 'smart_routing_spam_threshold',
+					'label'         => esc_html__( 'Spam threshold', 'gf-odoo-connector' ),
+					'type'          => 'text',
+					'input_type'    => 'number',
+					'class'         => 'small',
+					'default_value' => '2',
+					'tooltip'       => esc_html__( 'The spam score needed to classify a message as spam. Lower = stricter (catches more, risks false positives); higher = more lenient.', 'gf-odoo-connector' ),
+					'description'   => esc_html__( 'Minimum spam score to treat a submission as spam.', 'gf-odoo-connector' ),
+				),
+			),
+		);
+
+		$routing_section = array(
+			'title'       => esc_html__( 'Routing targets & tags', 'gf-odoo-connector' ),
+			'description' => esc_html__(
+				'Where confident decisions go in Odoo, and how uncertain ones are flagged for a human to review.',
+				'gf-odoo-connector'
+			),
+			'fields'      => array(
+				array(
+					'name'          => 'smart_routing_confidence_threshold',
+					'label'         => esc_html__( 'Confidence threshold', 'gf-odoo-connector' ),
+					'type'          => 'text',
+					'input_type'    => 'number',
+					'class'         => 'small',
+					'default_value' => '2',
+					'tooltip'       => esc_html__( 'How many keyword hits are needed before routing trusts a Sales/Support guess. Below this, Hybrid mode asks the AI; otherwise the lead is created and tagged for review.', 'gf-odoo-connector' ),
+					'description'   => esc_html__( 'Minimum keyword hits to confidently pick Sales or Support. Below this, Hybrid mode asks the AI; otherwise it routes to a CRM lead flagged for review.', 'gf-odoo-connector' ),
+				),
+				array(
+					'name'        => 'smart_routing_helpdesk_team_id',
+					'label'       => esc_html__( 'Default Helpdesk team', 'gf-odoo-connector' ),
+					'type'        => 'select',
+					'choices'     => $this->get_helpdesk_team_field_choices(),
+					'class'       => 'medium',
+					'tooltip'     => esc_html__( 'Support tickets created by routing are assigned to this team. If left empty, support messages fall back to a CRM lead flagged for review.', 'gf-odoo-connector' ),
+					'description' => esc_html__( 'Tickets created by smart routing are assigned to this team. Without a team, support messages become CRM leads flagged for review.', 'gf-odoo-connector' ),
+				),
+				array(
+					'name'          => 'smart_routing_helpdesk_desc_field',
+					'label'         => esc_html__( 'Ticket body field', 'gf-odoo-connector' ),
+					'type'          => 'select',
+					'default_value' => 'description',
+					'choices'       => $this->get_helpdesk_text_field_choices(),
+					'class'         => 'medium',
+					'tooltip'       => esc_html__( 'The list is read live from your Odoo. Pick the field that shows as "Issue Description" on the ticket form so the visitor\'s message lands in the right tab.', 'gf-odoo-connector' ),
+					'description'   => esc_html__( 'Which Odoo ticket field receives the visitor\'s message. Pick the one shown as "Issue Description" on your helpdesk form (the standard "description" field may be used for Resolution on customised instances).', 'gf-odoo-connector' ),
+				),
+				array(
+					'name'          => 'smart_routing_review_tag',
+					'label'         => esc_html__( 'Needs-review tag', 'gf-odoo-connector' ),
+					'type'          => 'text',
+					'class'         => 'medium',
+					'default_value' => 'Needs review',
+					'tooltip'       => esc_html__( 'CRM tag added to uncertain leads so your team can double-check the routing. Created in Odoo automatically if it doesn\'t exist.', 'gf-odoo-connector' ),
+					'description'   => esc_html__( 'CRM tag added to uncertain leads so your team can double-check routing. Created in Odoo if missing.', 'gf-odoo-connector' ),
+				),
+				array(
+					'name'        => 'smart_routing_web_lead_tag',
+					'label'       => esc_html__( 'Web lead tag (optional)', 'gf-odoo-connector' ),
+					'type'        => 'text',
+					'class'       => 'medium',
+					'tooltip'     => esc_html__( 'Optional CRM tag added to every lead routing creates, so you can filter web-sourced leads in Odoo. Leave empty to skip.', 'gf-odoo-connector' ),
+					'description' => esc_html__( 'Optional CRM tag added to every lead created by smart routing. Leave empty to skip.', 'gf-odoo-connector' ),
+				),
+			),
+		);
+
+		$ai_section = array(
+			'title'       => esc_html__( 'AI provider (Hybrid mode)', 'gf-odoo-connector' ),
+			'description' => esc_html__(
+				'Only used when Engine is set to Hybrid. The AI is asked to classify only the messages keywords couldn\'t decide, and runs in the background after the form is submitted. EU-based Mistral is the default.',
+				'gf-odoo-connector'
+			),
+			'fields'      => array(
+				array(
+					'name'  => 'smart_routing_ai_privacy',
+					'label' => '',
+					'type'  => 'html',
+					'html'  => $this->get_smart_routing_ai_privacy_markup(),
+				),
+				array(
+					'name'          => 'smart_routing_ai_provider',
+					'label'         => esc_html__( 'AI provider', 'gf-odoo-connector' ),
+					'type'          => 'select',
+					'default_value' => 'mistral',
+					'tooltip'       => esc_html__( 'Mistral is hosted in the EU (GDPR-friendly). Choose "Custom" to point at any OpenAI-compatible endpoint, e.g. Azure OpenAI in an EU region.', 'gf-odoo-connector' ),
+					'choices'       => array(
+						array(
+							'label' => esc_html__( 'Mistral (EU)', 'gf-odoo-connector' ),
+							'value' => 'mistral',
+						),
+						array(
+							'label' => esc_html__( 'Custom OpenAI-compatible endpoint', 'gf-odoo-connector' ),
+							'value' => 'custom',
+						),
+					),
+					'description'   => esc_html__( 'Mistral is EU-based. For a custom endpoint (e.g. Azure OpenAI in an EU region), set the base URL below.', 'gf-odoo-connector' ),
+				),
+				array(
+					'name'          => 'smart_routing_ai_key',
+					'label'         => esc_html__( 'AI API key', 'gf-odoo-connector' ),
+					'type'          => 'text',
+					'input_type'    => 'password',
+					'class'         => 'large',
+					'default_value' => $this->get_masked_ai_key(),
+					'tooltip'       => esc_html__( 'Your provider API key. Stored encrypted and shown masked after saving. Required for Hybrid mode.', 'gf-odoo-connector' ),
+					'description'   => esc_html__( 'Stored encrypted. Required for Hybrid mode.', 'gf-odoo-connector' ),
+				),
+				array(
+					'name'          => 'smart_routing_ai_model',
+					'label'         => esc_html__( 'AI model', 'gf-odoo-connector' ),
+					'type'          => 'text',
+					'class'         => 'medium',
+					'default_value' => 'mistral-small-latest',
+					'tooltip'       => esc_html__( 'The model name to call. For Mistral, mistral-small-latest is a good, low-cost default.', 'gf-odoo-connector' ),
+					'description'   => esc_html__( 'Model name, e.g. mistral-small-latest.', 'gf-odoo-connector' ),
+				),
+				array(
+					'name'        => 'smart_routing_ai_base_url',
+					'label'       => esc_html__( 'AI base URL (custom)', 'gf-odoo-connector' ),
+					'type'        => 'text',
+					'class'       => 'large',
+					'tooltip'     => esc_html__( 'Only needed for the Custom provider. Paste the full chat completions URL, or a base URL and the plugin appends /v1/chat/completions.', 'gf-odoo-connector' ),
+					'description' => esc_html__( 'Only for the custom provider. Full chat completions URL, or a base URL (the plugin appends /v1/chat/completions).', 'gf-odoo-connector' ),
+				),
+				array(
+					'name'        => 'smart_routing_test_ai',
+					'label'       => esc_html__( 'Test AI', 'gf-odoo-connector' ),
+					'type'        => 'html',
+					'tooltip'     => esc_html__( 'Sends one sample message to your provider right now and shows the result or the exact error, so you can confirm the key, model, and endpoint work.', 'gf-odoo-connector' ),
+					'html'        => sprintf(
+						'<p class="description" style="margin:0 0 6px;">%1$s</p>'
+						. '<textarea id="gf-odoo-ai-test-sample" rows="3" class="large-text" placeholder="%2$s"></textarea>'
+						. '<p style="margin:6px 0 0;"><button type="button" class="button button-secondary" id="gf-odoo-test-ai">%3$s</button>'
+						. '<span id="gf-odoo-test-ai-result" class="gf-odoo-test-result" style="margin-left:8px;" role="status" aria-live="polite"></span></p>',
+						esc_html__( 'Save the API key first, then send a sample message to confirm the key, model, and endpoint work. Leave blank to use a built-in spam sample.', 'gf-odoo-connector' ),
+						esc_attr__( 'Optional: paste a sample message to classify…', 'gf-odoo-connector' ),
+						esc_html__( 'Test AI', 'gf-odoo-connector' )
+					),
+				),
+			),
+		);
+
+		return array(
+			$overview_section,
+			$keywords_section,
+			$spam_section,
+			$routing_section,
+			$ai_section,
+		);
+	}
+
+	/**
+	 * Beta banner shown at the top of the Smart routing settings page.
+	 *
+	 * @return string
+	 */
+	private function get_smart_routing_beta_notice_markup(): string {
+		return sprintf(
+			'<div class="gf-odoo-beta-notice"><strong>%1$s</strong> %2$s</div>',
+			esc_html__( 'Beta feature.', 'gf-odoo-connector' ),
+			esc_html__(
+				'Smart routing is experimental. Start with Mode = Log only, review the routing decisions in entry notes for a few days, tune the keyword lists, then switch to Enforce. It never deletes entries; vendor/spam is simply not synced to Odoo.',
+				'gf-odoo-connector'
+			)
+		);
+	}
+
+	/**
+	 * GDPR / privacy note for the AI subsection.
+	 *
+	 * @return string
+	 */
+	private function get_smart_routing_ai_privacy_markup(): string {
+		return sprintf(
+			'<div class="gf-odoo-note gf-odoo-note--info"><span class="dashicons dashicons-shield-alt" aria-hidden="true"></span><div><strong>%1$s</strong> %2$s</div></div>',
+			esc_html__( 'Privacy:', 'gf-odoo-connector' ),
+			esc_html__(
+				'Only uncertain submissions are sent, and only the message text plus the sender\'s email domain. Because messages can contain personal data, use an EU region, sign the provider\'s data-processing agreement, and disable training on your data.',
+				'gf-odoo-connector'
+			)
+		);
+	}
+
+	/**
+	 * Visual "how it works" panel for the Smart routing overview card.
+	 *
+	 * @return string
+	 */
+	private function get_smart_routing_how_it_works_markup(): string {
+		$steps = array(
+			array(
+				'icon'  => 'dashicons-forms',
+				'title' => esc_html__( 'Form submitted', 'gf-odoo-connector' ),
+				'text'  => esc_html__( 'A visitor sends a generic contact form.', 'gf-odoo-connector' ),
+			),
+			array(
+				'icon'  => 'dashicons-search',
+				'title' => esc_html__( 'Keyword scan', 'gf-odoo-connector' ),
+				'text'  => esc_html__( 'Instant, offline check classifies the obvious cases.', 'gf-odoo-connector' ),
+			),
+			array(
+				'icon'  => 'dashicons-superhero',
+				'title' => esc_html__( 'AI (if unsure)', 'gf-odoo-connector' ),
+				'text'  => esc_html__( 'Hybrid mode asks the AI in the background for tricky messages.', 'gf-odoo-connector' ),
+			),
+			array(
+				'icon'  => 'dashicons-randomize',
+				'title' => esc_html__( 'Routed', 'gf-odoo-connector' ),
+				'text'  => esc_html__( 'Sales → CRM lead · Support → Helpdesk ticket · Spam → skipped.', 'gf-odoo-connector' ),
+			),
+		);
+
+		$items = '';
+
+		foreach ( $steps as $i => $step ) {
+			if ( $i > 0 ) {
+				$items .= '<span class="gf-odoo-flow__arrow dashicons dashicons-arrow-right-alt2" aria-hidden="true"></span>';
+			}
+
+			$items .= sprintf(
+				'<div class="gf-odoo-flow__step"><span class="gf-odoo-flow__icon dashicons %1$s" aria-hidden="true"></span><span class="gf-odoo-flow__title">%2$s</span><span class="gf-odoo-flow__text">%3$s</span></div>',
+				esc_attr( $step['icon'] ),
+				esc_html( $step['title'] ),
+				esc_html( $step['text'] )
+			);
+		}
+
+		return '<div class="gf-odoo-flow">' . $items . '</div>';
 	}
 
 	/**
@@ -2495,6 +3034,21 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 						),
 						'description' => esc_html__(
 							'Choose whether submissions create CRM leads or Helpdesk tickets.',
+							'gf-odoo-connector'
+						),
+					),
+					array(
+						'name'    => 'smart_routing_enabled',
+						'label'   => esc_html__( 'Smart routing (Beta)', 'gf-odoo-connector' ),
+						'type'    => 'checkbox',
+						'choices' => array(
+							array(
+								'name'  => 'smart_routing_enabled',
+								'label' => esc_html__( 'Classify submissions from this form and route them automatically', 'gf-odoo-connector' ),
+							),
+						),
+						'description' => esc_html__(
+							'For generic contact forms. Inspects the message and routes it to CRM (sales), Helpdesk (support), or skips vendor/spam. Configure keywords and the AI under Forms → Settings → GF Odoo Connector → Smart routing (Beta). Requires the global master switch to be on.',
 							'gf-odoo-connector'
 						),
 					),
@@ -2885,6 +3439,68 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			$choices[] = array(
 				'label' => $team['label'],
 				'value' => (string) $team['value'],
+			);
+		}
+
+		return $choices;
+	}
+
+	/**
+	 * Text/HTML ticket field choices for the smart routing "ticket body" select.
+	 *
+	 * @return array<int, array{value: string, label: string}>
+	 */
+	private function get_helpdesk_text_field_choices(): array {
+		$choices = array(
+			array(
+				'label' => esc_html__( 'Description (standard)', 'gf-odoo-connector' ),
+				'value' => 'description',
+			),
+		);
+
+		$api = $this->get_odoo_api();
+
+		if ( null === $api ) {
+			return $choices;
+		}
+
+		$cached = get_transient( 'gf_odoo_helpdesk_text_fields' );
+
+		if ( ! is_array( $cached ) ) {
+			try {
+				$helpdesk = new Helpdesk_Handler( $api );
+				$fields   = $helpdesk->get_ticket_fields_metadata();
+			} catch ( Exception $e ) {
+				$fields = array();
+			}
+
+			$cached = array();
+
+			foreach ( (array) $fields as $name => $meta ) {
+				$type = (string) rgar( (array) $meta, 'type' );
+
+				if ( ! in_array( $type, array( 'text', 'html', 'char' ), true ) ) {
+					continue;
+				}
+
+				$label = (string) rgar( (array) $meta, 'string' );
+				$cached[ (string) $name ] = '' !== $label ? $label : (string) $name;
+			}
+
+			if ( ! empty( $cached ) ) {
+				asort( $cached );
+				set_transient( 'gf_odoo_helpdesk_text_fields', $cached, self::ASSIGNMENT_CACHE_TTL );
+			}
+		}
+
+		foreach ( (array) $cached as $name => $label ) {
+			if ( 'description' === $name ) {
+				continue;
+			}
+
+			$choices[] = array(
+				'label' => sprintf( '%1$s (%2$s)', $label, $name ),
+				'value' => (string) $name,
 			);
 		}
 
@@ -4447,9 +5063,40 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			'clear_odoo_cache',
 			'reset_plugin_settings',
 			'crm_assignment_refresh_global',
+			'smart_routing_beta_notice',
+			'smart_routing_ai_heading',
 		);
 		foreach ( $ui_only_keys as $key ) {
 			unset( $merged[ $key ] );
+		}
+
+		if ( array_key_exists( 'smart_routing_ai_key', $incoming ) ) {
+			$raw_ai_key = (string) $incoming['smart_routing_ai_key'];
+
+			if ( ! $this->is_masked_ai_key( $raw_ai_key ) && '' !== trim( $raw_ai_key ) ) {
+				$this->store_ai_key( trim( $raw_ai_key ) );
+			}
+
+			// Never persist the raw AI key in GF settings.
+			unset( $merged['smart_routing_ai_key'] );
+		}
+
+		foreach ( array( 'smart_routing_max_links', 'smart_routing_spam_threshold', 'smart_routing_confidence_threshold' ) as $int_key ) {
+			if ( array_key_exists( $int_key, $incoming ) ) {
+				$merged[ $int_key ] = (string) max( 0, (int) $incoming[ $int_key ] );
+			}
+		}
+
+		if ( array_key_exists( 'smart_routing_helpdesk_team_id', $incoming ) ) {
+			$merged['smart_routing_helpdesk_team_id'] = '' !== trim( (string) $incoming['smart_routing_helpdesk_team_id'] )
+				? (string) absint( $incoming['smart_routing_helpdesk_team_id'] )
+				: '';
+		}
+
+		if ( array_key_exists( 'smart_routing_helpdesk_desc_field', $incoming ) ) {
+			$field_name = strtolower( trim( (string) $incoming['smart_routing_helpdesk_desc_field'] ) );
+			$field_name = preg_replace( '/[^a-z0-9_]/', '', $field_name );
+			$merged['smart_routing_helpdesk_desc_field'] = '' !== $field_name ? $field_name : 'description';
 		}
 
 		if ( array_key_exists( 'default_crm_user_id', $incoming ) ) {
@@ -4551,6 +5198,26 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			return false;
 		}
 
+		// Smart routing (Beta): may skip spam, defer to AI, or reroute the module.
+		$smart = null;
+		try {
+			$smart = $this->maybe_smart_route( $feed, $entry, $form );
+		} catch ( Throwable $e ) {
+			$this->log_error( 'Smart routing error (continuing with normal routing): ' . $e->getMessage() );
+			$smart = null;
+		}
+
+		if ( is_array( $smart ) && ! empty( $smart['skip'] ) ) {
+			gform_update_meta( $entry_id, 'odoo_sync_status', 'skipped', $form_id );
+			gform_delete_meta( $entry_id, 'odoo_next_retry_at', $form_id );
+
+			if ( ! empty( $smart['note'] ) ) {
+				$this->add_note( $entry_id, $smart['note'], 'note' );
+			}
+
+			return true;
+		}
+
 		if ( GF_Odoo_Async_Sync::has_pending_job( $entry_id, $feed_id ) ) {
 			$this->log_debug(
 				sprintf(
@@ -4564,12 +5231,21 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		}
 
 		try {
-			$job = $this->build_async_job_payload( $feed, $entry, $form, 1 );
+			if ( is_array( $smart ) && ! empty( $smart['job'] ) ) {
+				$job    = $smart['job'];
+				$module = (string) rgar( $job, 'module', $module );
+			} else {
+				$job = $this->build_async_job_payload( $feed, $entry, $form, 1 );
+			}
 		} catch ( Exception $e ) {
 			$this->log_sync_failure( $feed, $entry, $form, $module, $e, null );
 			gform_update_meta( $entry_id, 'odoo_sync_status', 'failed', $form_id );
 
 			return false;
+		}
+
+		if ( is_array( $smart ) && ! empty( $smart['note'] ) ) {
+			$this->add_note( $entry_id, $smart['note'], 'note' );
 		}
 
 		gform_update_meta( $entry_id, 'odoo_sync_status', 'pending', $form_id );
@@ -4615,7 +5291,57 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		}
 
 		$payload = GF_Odoo_Async_Sync::normalize_job_args( $payload );
-		$job     = $this->normalize_job_payload( $payload );
+
+		// Deferred Smart routing job: resolve module/payload (and AI) before syncing.
+		if ( ! empty( $payload['smart_routing'] ) && empty( $payload['sync_payload'] ) ) {
+			try {
+				$resolved = $this->resolve_smart_routing_job( $payload );
+			} catch ( Throwable $e ) {
+				$this->last_sync_job_error = $e->getMessage();
+
+				$fail_entry_id = (int) rgar( $payload, 'entry_id', 0 );
+				$fail_form_id  = (int) rgar( $payload, 'form_id', 0 );
+
+				$this->log_error( 'Smart routing job could not be built: ' . $e->getMessage() );
+
+				if ( $fail_entry_id > 0 ) {
+					gform_update_meta( $fail_entry_id, 'odoo_sync_status', 'failed', $fail_form_id );
+					$this->add_note(
+						$fail_entry_id,
+						sprintf(
+							/* translators: %s: error message */
+							esc_html__( 'Smart routing could not build the Odoo payload: %s', 'gf-odoo-connector' ),
+							$e->getMessage()
+						),
+						'error'
+					);
+				}
+
+				return false;
+			}
+
+			if ( 'skip' === $resolved ) {
+				$skip_entry_id = (int) rgar( $payload, 'entry_id', 0 );
+				$skip_form_id  = (int) rgar( $payload, 'form_id', 0 );
+
+				if ( $skip_entry_id > 0 ) {
+					gform_update_meta( $skip_entry_id, 'odoo_sync_status', 'skipped', $skip_form_id );
+					gform_delete_meta( $skip_entry_id, 'odoo_next_retry_at', $skip_form_id );
+				}
+
+				return true;
+			}
+
+			if ( ! is_array( $resolved ) ) {
+				$this->last_sync_job_error = 'Smart routing could not be resolved (entry, form, or feed missing).';
+
+				return false;
+			}
+
+			$payload = $resolved;
+		}
+
+		$job = $this->normalize_job_payload( $payload );
 
 		$entry_id = (int) $job['entry_id'];
 		$form_id  = (int) $job['form_id'];
@@ -6774,6 +7500,750 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	}
 
 	/**
+	 * Resolved Smart routing configuration from plugin settings.
+	 *
+	 * @return array
+	 */
+	private function get_smart_routing_config(): array {
+		$settings = $this->get_connection_settings();
+
+		$value = function ( $key, $default = '' ) use ( $settings ) {
+			$raw = rgar( $settings, $key );
+
+			if ( is_array( $raw ) ) {
+				$raw = rgar( $raw, $key );
+			}
+
+			return ( '' === $raw || null === $raw ) ? $default : $raw;
+		};
+
+		$checkbox = function ( $key ) use ( $settings ) {
+			$raw = rgar( $settings, $key );
+
+			if ( is_array( $raw ) ) {
+				$raw = rgar( $raw, $key );
+			}
+
+			return ! empty( $raw );
+		};
+
+		$engine   = (string) $value( 'smart_routing_engine', 'hybrid' );
+		$provider = (string) $value( 'smart_routing_ai_provider', 'mistral' );
+		$base_url = (string) $value( 'smart_routing_ai_base_url', '' );
+		$model    = (string) $value( 'smart_routing_ai_model', 'mistral-small-latest' );
+
+		if ( '' === trim( $model ) ) {
+			$model = 'mistral-small-latest';
+		}
+
+		$endpoint = 'custom' === $provider
+			? $this->normalize_ai_endpoint( $base_url )
+			: 'https://api.mistral.ai/v1/chat/completions';
+
+		return array(
+			'enabled'              => $checkbox( 'smart_routing_enabled' ),
+			'mode'                 => (string) $value( 'smart_routing_mode', 'log' ),
+			'engine'               => $engine,
+			'spam_keywords'        => GF_Odoo_Lead_Classifier::lines_to_list( (string) $value( 'smart_routing_spam_keywords', implode( "\n", GF_Odoo_Lead_Classifier::default_spam_keywords() ) ) ),
+			'sales_keywords'       => GF_Odoo_Lead_Classifier::lines_to_list( (string) $value( 'smart_routing_sales_keywords', implode( "\n", GF_Odoo_Lead_Classifier::default_sales_keywords() ) ) ),
+			'support_keywords'     => GF_Odoo_Lead_Classifier::lines_to_list( (string) $value( 'smart_routing_support_keywords', implode( "\n", GF_Odoo_Lead_Classifier::default_support_keywords() ) ) ),
+			'blocked_domains'      => GF_Odoo_Lead_Classifier::lines_to_list( (string) $value( 'smart_routing_blocked_domains', implode( "\n", GF_Odoo_Lead_Classifier::default_blocked_domains() ) ) ),
+			'max_links'            => (int) $value( 'smart_routing_max_links', 3 ),
+			'spam_threshold'       => max( 1, (int) $value( 'smart_routing_spam_threshold', 2 ) ),
+			'confidence_threshold' => max( 1, (int) $value( 'smart_routing_confidence_threshold', 2 ) ),
+			'helpdesk_team_id'     => (int) $value( 'smart_routing_helpdesk_team_id', 0 ),
+			'helpdesk_desc_field'  => (string) $value( 'smart_routing_helpdesk_desc_field', 'description' ),
+			'review_tag'           => (string) $value( 'smart_routing_review_tag', 'Needs review' ),
+			'web_lead_tag'         => (string) $value( 'smart_routing_web_lead_tag', '' ),
+			'ai_enabled'           => 'hybrid' === $engine,
+			'ai_provider'          => $provider,
+			'ai_endpoint'          => $endpoint,
+			'ai_model'             => $model,
+			'ai_key'               => $this->get_ai_key(),
+			'ai_timeout'           => 10,
+		);
+	}
+
+	/**
+	 * Build a chat-completions endpoint from a custom base URL.
+	 *
+	 * @param string $base_url Configured base URL.
+	 *
+	 * @return string
+	 */
+	private function normalize_ai_endpoint( string $base_url ): string {
+		$base_url = trim( $base_url );
+
+		if ( '' === $base_url ) {
+			return '';
+		}
+
+		if ( false !== strpos( $base_url, 'chat/completions' ) ) {
+			return $base_url;
+		}
+
+		return rtrim( $base_url, '/' ) . '/v1/chat/completions';
+	}
+
+	/**
+	 * Whether smart routing should act on this feed at submission time.
+	 *
+	 * @param array $feed Feed object.
+	 * @param array $config Resolved config.
+	 *
+	 * @return bool
+	 */
+	private function smart_routing_applies( array $feed, array $config ): bool {
+		if ( empty( $config['enabled'] ) || 'off' === $config['mode'] ) {
+			return false;
+		}
+
+		return ! empty( rgars( $feed, 'meta/smart_routing_enabled' ) );
+	}
+
+	/**
+	 * Run the keyword pre-pass at submission time and decide what to queue.
+	 *
+	 * @param array $feed  Feed object.
+	 * @param array $entry Entry object.
+	 * @param array $form  Form object.
+	 *
+	 * @return array|null Null to continue normally; otherwise skip/job instructions.
+	 */
+	private function maybe_smart_route( array $feed, array $entry, array $form ): ?array {
+		$config = $this->get_smart_routing_config();
+
+		if ( ! $this->smart_routing_applies( $feed, $config ) ) {
+			return null;
+		}
+
+		$entry_id = (int) rgar( $entry, 'id' );
+		$result   = GF_Odoo_Lead_Classifier::classify( $entry, $form, $config );
+
+		// Log only: record the would-be decision, change nothing.
+		if ( 'enforce' !== $config['mode'] ) {
+			if ( $entry_id > 0 ) {
+				$this->add_note(
+					$entry_id,
+					$this->format_smart_routing_note( $result['bucket'], 'keyword', true, '', $result ),
+					'note'
+				);
+			}
+
+			return null;
+		}
+
+		// Enforce, confident keyword decision: act now.
+		if ( ! empty( $result['confident'] ) ) {
+			return $this->build_smart_action( $result['bucket'], $feed, $entry, $form, $config, 'keyword', '', $result );
+		}
+
+		// Uncertain + Hybrid + AI configured: defer the decision (and the AI call) to the worker.
+		if ( 'hybrid' === $config['engine'] && GF_Odoo_AI_Classifier::is_configured( $config ) ) {
+			if ( $entry_id > 0 ) {
+				$this->add_note(
+					$entry_id,
+					esc_html__( 'Smart routing: uncertain by keywords, deferring to AI review.', 'gf-odoo-connector' ),
+					'note'
+				);
+			}
+
+			return array( 'job' => $this->build_smart_deferred_job( $feed, $entry, $form, $result ) );
+		}
+
+		// Uncertain, keyword-only: never lose a lead, route to CRM flagged for review.
+		return $this->build_smart_action( GF_Odoo_Lead_Classifier::UNSURE, $feed, $entry, $form, $config, 'keyword', '', $result );
+	}
+
+	/**
+	 * Turn a decided bucket into a skip instruction or a full sync job.
+	 *
+	 * @param string $bucket Decided bucket.
+	 * @param array  $feed   Feed object.
+	 * @param array  $entry  Entry object.
+	 * @param array  $form   Form object.
+	 * @param array  $config Config.
+	 * @param string $engine 'keyword' or 'AI'.
+	 * @param string $reason AI reason (optional).
+	 * @param array  $kw     Keyword classification result (for the note).
+	 *
+	 * @return array
+	 */
+	private function build_smart_action( string $bucket, array $feed, array $entry, array $form, array $config, string $engine, string $reason, array $kw ): array {
+		$entry_id = (int) rgar( $entry, 'id' );
+		$target   = $this->resolve_smart_target( $bucket, $config );
+
+		if ( 'skip' === $target['action'] ) {
+			return array(
+				'skip' => true,
+				'note' => $this->format_smart_routing_note( 'spam', $engine, false, $reason, $kw ),
+			);
+		}
+
+		$built = $this->build_smart_job_payload( $target['module'], $feed, $entry, $form, $target['tags'], $target['team_id'], (string) rgar( $config, 'helpdesk_desc_field', 'description' ) );
+
+		$job = array(
+			'feed_id'      => (int) rgar( $feed, 'id' ),
+			'entry_id'     => $entry_id,
+			'form_id'      => (int) rgar( $form, 'id' ),
+			'module'       => $built['module'],
+			'attempt'      => 1,
+			'sync_payload' => $built['sync_payload'],
+			'form_title'   => (string) rgar( $form, 'title' ),
+		);
+
+		return array(
+			'job'    => $job,
+			'module' => $built['module'],
+			'note'   => $this->format_smart_routing_note( $target['effective_bucket'], $engine, false, $reason, $kw ),
+		);
+	}
+
+	/**
+	 * Map a bucket to a routing target (module, tags, team) or a skip.
+	 *
+	 * @param string $bucket Decided bucket.
+	 * @param array  $config Config.
+	 *
+	 * @return array{action:string,module:string,tags:array,team_id:int,effective_bucket:string}
+	 */
+	private function resolve_smart_target( string $bucket, array $config ): array {
+		$web_lead = trim( (string) $config['web_lead_tag'] );
+		$review   = trim( (string) $config['review_tag'] );
+		$team_id  = (int) $config['helpdesk_team_id'];
+
+		$base_tags = array();
+		if ( '' !== $web_lead ) {
+			$base_tags[] = $web_lead;
+		}
+
+		if ( GF_Odoo_Lead_Classifier::SPAM === $bucket ) {
+			return array(
+				'action'           => 'skip',
+				'module'           => '',
+				'tags'             => array(),
+				'team_id'          => 0,
+				'effective_bucket' => 'spam',
+			);
+		}
+
+		if ( GF_Odoo_Lead_Classifier::SUPPORT === $bucket ) {
+			if ( $team_id > 0 ) {
+				return array(
+					'action'           => 'route',
+					'module'           => 'helpdesk',
+					'tags'             => array(),
+					'team_id'          => $team_id,
+					'effective_bucket' => 'support',
+				);
+			}
+
+			// No default team: keep it as a CRM lead flagged for review.
+			$tags = $base_tags;
+			if ( '' !== $review ) {
+				$tags[] = $review;
+			}
+
+			return array(
+				'action'           => 'route',
+				'module'           => 'crm',
+				'tags'             => $tags,
+				'team_id'          => 0,
+				'effective_bucket' => 'support-review',
+			);
+		}
+
+		if ( GF_Odoo_Lead_Classifier::UNSURE === $bucket ) {
+			$tags = $base_tags;
+			if ( '' !== $review ) {
+				$tags[] = $review;
+			}
+
+			return array(
+				'action'           => 'route',
+				'module'           => 'crm',
+				'tags'             => $tags,
+				'team_id'          => 0,
+				'effective_bucket' => 'unsure',
+			);
+		}
+
+		// Sales (default).
+		return array(
+			'action'           => 'route',
+			'module'           => 'crm',
+			'tags'             => $base_tags,
+			'team_id'          => 0,
+			'effective_bucket' => 'sales',
+		);
+	}
+
+	/**
+	 * Build the module-specific sync payload for a smart-routed entry.
+	 *
+	 * Reuses the native payload for the feed's own module, and synthesises the
+	 * other module's payload from the mapped basics when routing across modules.
+	 *
+	 * @param string $target_module crm|helpdesk.
+	 * @param array  $feed          Feed object.
+	 * @param array  $entry         Entry object.
+	 * @param array  $form          Form object.
+	 * @param array  $tags          CRM tag names to apply (lead only).
+	 * @param int    $team_id       Helpdesk team ID (helpdesk only).
+	 *
+	 * @return array{module:string,sync_payload:array}
+	 *
+	 * @throws Exception When mapping fails.
+	 */
+	private function build_smart_job_payload( string $target_module, array $feed, array $entry, array $form, array $tags, int $team_id, string $issue_field = 'description' ): array {
+		$feed_module = $this->get_feed_module( $feed );
+
+		$native = 'helpdesk' === $feed_module
+			? $this->build_helpdesk_sync_payload( $feed, $entry, $form )
+			: $this->build_crm_sync_payload( $feed, $entry, $form );
+
+		$basics = $this->smart_extract_basics( $feed_module, $native, $form );
+
+		// The visitor's actual message, used as a body fallback when the feed
+		// mapping does not populate a description (common on contact forms).
+		$basics['message'] = $this->smart_get_message_text( $entry, $form );
+
+		if ( 'helpdesk' === $target_module ) {
+			$payload = 'helpdesk' === $feed_module
+				? $native
+				: $this->synth_helpdesk_payload_from_basics( $basics, $team_id, $issue_field );
+
+			// Native helpdesk feeds map the body to "description"; honour the
+			// configured ticket body field so it lands in the right tab.
+			if ( 'helpdesk' === $feed_module && 'description' !== $issue_field
+				&& isset( $payload['ticket']['description'] ) && '' !== (string) $payload['ticket']['description'] ) {
+				$payload['ticket'][ $issue_field ] = $this->smart_text_to_html( (string) $payload['ticket']['description'] );
+				unset( $payload['ticket']['description'] );
+			}
+
+			if ( $team_id > 0 ) {
+				$payload['ticket']['team_id'] = $team_id;
+			}
+
+			return array(
+				'module'       => 'helpdesk',
+				'sync_payload' => $payload,
+			);
+		}
+
+		$payload = 'crm' === $feed_module
+			? $native
+			: $this->synth_crm_payload_from_basics( $basics, $feed, $form );
+
+		if ( ! empty( $tags ) ) {
+			if ( ! isset( $payload['lead'] ) || ! is_array( $payload['lead'] ) ) {
+				$payload['lead'] = array();
+			}
+			$payload['lead']['smart_tag_names'] = array_values( $tags );
+		}
+
+		return array(
+			'module'       => 'crm',
+			'sync_payload' => $payload,
+		);
+	}
+
+	/**
+	 * Extract contact/message basics from a built sync payload.
+	 *
+	 * @param string $feed_module crm|helpdesk.
+	 * @param array  $payload     Native sync payload.
+	 * @param array  $form        Form object.
+	 *
+	 * @return array{name:string,email:string,phone:string,company:string,subject:string,description:string}
+	 */
+	private function smart_extract_basics( string $feed_module, array $payload, array $form ): array {
+		if ( 'helpdesk' === $feed_module ) {
+			$ticket  = (array) rgar( $payload, 'ticket', array() );
+			$contact = (array) rgar( $payload, 'contact', array() );
+
+			return array(
+				'name'        => (string) ( $ticket['partner_name'] ?? $contact['name'] ?? '' ),
+				'email'       => (string) ( $ticket['partner_email'] ?? $contact['email'] ?? '' ),
+				'phone'       => (string) ( $ticket['partner_phone'] ?? $contact['phone'] ?? '' ),
+				'company'     => (string) ( $contact['company_name'] ?? '' ),
+				'subject'     => (string) ( $ticket['name'] ?? '' ),
+				'description' => (string) ( $ticket['description'] ?? '' ),
+			);
+		}
+
+		$contact = ! empty( $payload['contact'] ) ? (array) $payload['contact'] : (array) rgar( $payload, 'partner', array() );
+		$lead    = (array) rgar( $payload, 'lead', array() );
+
+		return array(
+			'name'        => (string) ( $contact['name'] ?? '' ),
+			'email'       => (string) ( $contact['email'] ?? '' ),
+			'phone'       => (string) ( $contact['phone'] ?? $contact['mobile'] ?? '' ),
+			'company'     => (string) ( $contact['company_name'] ?? '' ),
+			'subject'     => (string) ( $lead['name'] ?? '' ),
+			'description' => (string) ( $lead['description'] ?? $contact['comment'] ?? '' ),
+		);
+	}
+
+	/**
+	 * Best-effort message body from an entry: the longest field value, which on
+	 * a contact form is almost always the message/comment textarea.
+	 *
+	 * @param array $entry Entry object.
+	 * @param array $form  Form object.
+	 *
+	 * @return string
+	 */
+	/**
+	 * Wrap a plain-text message in light HTML so line breaks survive in Odoo
+	 * HTML fields (custom "Issue Description" fields are usually HTML).
+	 *
+	 * @param string $text Plain text body.
+	 *
+	 * @return string
+	 */
+	private function smart_text_to_html( string $text ): string {
+		$text = trim( $text );
+
+		if ( '' === $text ) {
+			return '';
+		}
+
+		// Already HTML? Leave it as-is.
+		if ( $text !== wp_strip_all_tags( $text ) ) {
+			return $text;
+		}
+
+		return wpautop( esc_html( $text ) );
+	}
+
+	private function smart_get_message_text( array $entry, array $form ): string {
+		$best     = '';
+		$best_len = 0;
+
+		foreach ( $entry as $key => $value ) {
+			if ( ! is_scalar( $value ) ) {
+				continue;
+			}
+
+			if ( ! preg_match( '/^\d+(\.\d+)?$/', (string) $key ) ) {
+				continue;
+			}
+
+			$value = trim( (string) $value );
+
+			if ( '' === $value || is_email( $value ) ) {
+				continue;
+			}
+
+			$len = function_exists( 'mb_strlen' ) ? mb_strlen( $value ) : strlen( $value );
+
+			if ( $len > $best_len ) {
+				$best     = $value;
+				$best_len = $len;
+			}
+		}
+
+		return $best;
+	}
+
+	/**
+	 * Synthesise a CRM payload from basics (when routing a non-CRM feed to CRM).
+	 *
+	 * @param array $basics Extracted basics.
+	 * @param array $feed   Feed object.
+	 * @param array $form   Form object.
+	 *
+	 * @return array
+	 */
+	private function synth_crm_payload_from_basics( array $basics, array $feed, array $form ): array {
+		$name = trim( $basics['name'] );
+
+		if ( '' === $name ) {
+			$name = '' !== $basics['email']
+				? (string) strstr( $basics['email'], '@', true )
+				: esc_html__( 'Website visitor', 'gf-odoo-connector' );
+		}
+
+		$contact = array( 'name' => $name );
+
+		if ( '' !== $basics['email'] ) {
+			$contact['email'] = $basics['email'];
+		}
+		if ( '' !== $basics['phone'] ) {
+			$contact['phone'] = $basics['phone'];
+		}
+		if ( '' !== $basics['company'] ) {
+			$contact['company_name'] = $basics['company'];
+		}
+
+		$lead = array(
+			'name' => '' !== trim( $basics['subject'] ) ? trim( $basics['subject'] ) : (string) rgar( $form, 'title' ),
+		);
+
+		$description = '' !== trim( (string) $basics['description'] )
+			? (string) $basics['description']
+			: (string) ( $basics['message'] ?? '' );
+
+		if ( '' !== trim( $description ) ) {
+			$lead['description'] = $description;
+		}
+
+		$meta = (array) rgar( $feed, 'meta', array() );
+		$this->migrate_feed_meta( $meta );
+		$this->apply_default_crm_assignment( $meta );
+
+		return array(
+			'contact'    => $contact,
+			'lead'       => $lead,
+			'feed_meta'  => $meta,
+			'form_title' => (string) rgar( $form, 'title' ),
+		);
+	}
+
+	/**
+	 * Synthesise a Helpdesk payload from basics (when routing a non-Helpdesk feed to Helpdesk).
+	 *
+	 * @param array $basics  Extracted basics.
+	 * @param int   $team_id Helpdesk team ID.
+	 *
+	 * @return array
+	 */
+	private function synth_helpdesk_payload_from_basics( array $basics, int $team_id, string $issue_field = 'description' ): array {
+		$subject = trim( $basics['subject'] );
+
+		if ( '' === $subject ) {
+			$who     = '' !== $basics['name'] ? $basics['name'] : ( '' !== $basics['email'] ? $basics['email'] : esc_html__( 'website', 'gf-odoo-connector' ) );
+			$subject = sprintf(
+				/* translators: %s: sender name or email */
+				esc_html__( 'Support request from %s', 'gf-odoo-connector' ),
+				$who
+			);
+		}
+
+		$ticket = array( 'name' => $subject );
+
+		$description = '' !== trim( (string) $basics['description'] )
+			? (string) $basics['description']
+			: (string) ( $basics['message'] ?? '' );
+
+		if ( '' !== trim( $description ) ) {
+			$field = '' !== trim( $issue_field ) ? trim( $issue_field ) : 'description';
+
+			if ( 'description' === $field ) {
+				$ticket['description'] = $description;
+			} else {
+				// Custom HTML fields keep their formatting only when wrapped.
+				$ticket[ $field ] = $this->smart_text_to_html( $description );
+			}
+		}
+		if ( '' !== $basics['name'] ) {
+			$ticket['partner_name'] = $basics['name'];
+		}
+		if ( '' !== $basics['email'] ) {
+			$ticket['partner_email'] = $basics['email'];
+		}
+		if ( '' !== $basics['phone'] ) {
+			$ticket['partner_phone'] = $basics['phone'];
+		}
+		if ( $team_id > 0 ) {
+			$ticket['team_id'] = $team_id;
+		}
+
+		return array( 'ticket' => $ticket );
+	}
+
+	/**
+	 * Build a deferred "smart" job that the worker resolves with AI.
+	 *
+	 * @param array $feed   Feed object.
+	 * @param array $entry  Entry object.
+	 * @param array $form   Form object.
+	 * @param array $result Keyword classification result.
+	 *
+	 * @return array
+	 */
+	private function build_smart_deferred_job( array $feed, array $entry, array $form, array $result ): array {
+		return array(
+			'feed_id'       => (int) rgar( $feed, 'id' ),
+			'entry_id'      => (int) rgar( $entry, 'id' ),
+			'form_id'       => (int) rgar( $form, 'id' ),
+			'form_title'    => (string) rgar( $form, 'title' ),
+			'attempt'       => 1,
+			'smart_routing' => true,
+			'ai_text'       => (string) ( $result['text'] ?? '' ),
+			'ai_domain'     => (string) ( $result['domain'] ?? '' ),
+			'kw_bucket'     => (string) ( $result['bucket'] ?? GF_Odoo_Lead_Classifier::UNSURE ),
+			'kw_matched'    => (array) ( $result['matched'] ?? array() ),
+			'kw_scores'     => (array) ( $result['scores'] ?? array() ),
+		);
+	}
+
+	/**
+	 * Resolve a deferred "smart" job in the worker: run AI, decide, build payload.
+	 *
+	 * @param array $payload Deferred job payload.
+	 *
+	 * @return array|string Full sync job, or the string 'skip', or null on fatal error.
+	 */
+	private function resolve_smart_routing_job( array $payload ) {
+		$entry_id = (int) rgar( $payload, 'entry_id', 0 );
+		$form_id  = (int) rgar( $payload, 'form_id', 0 );
+		$feed_id  = (int) rgar( $payload, 'feed_id', 0 );
+
+		if ( $entry_id <= 0 || $form_id <= 0 || $feed_id <= 0 || ! class_exists( 'GFAPI' ) ) {
+			return null;
+		}
+
+		$feed  = GFAPI::get_feed( $feed_id );
+		$entry = GFAPI::get_entry( $entry_id );
+		$form  = GFAPI::get_form( $form_id );
+
+		if ( is_wp_error( $feed ) || empty( $feed ) || is_wp_error( $entry ) || empty( $entry ) || is_wp_error( $form ) || empty( $form ) ) {
+			return null;
+		}
+
+		$config    = $this->get_smart_routing_config();
+		$kw        = array(
+			'bucket'  => (string) rgar( $payload, 'kw_bucket', GF_Odoo_Lead_Classifier::UNSURE ),
+			'matched' => (array) rgar( $payload, 'kw_matched', array() ),
+			'scores'  => (array) rgar( $payload, 'kw_scores', array() ),
+		);
+		$kw_bucket = $kw['bucket'];
+
+		$engine = 'keyword';
+		$reason = '';
+		$bucket = $kw_bucket;
+
+		if ( 'hybrid' === $config['engine'] && GF_Odoo_AI_Classifier::is_configured( $config ) ) {
+			$ai = GF_Odoo_AI_Classifier::classify(
+				(string) rgar( $payload, 'ai_text', '' ),
+				array( 'domain' => (string) rgar( $payload, 'ai_domain', '' ) ),
+				$config
+			);
+
+			if ( is_array( $ai ) ) {
+				$engine     = 'AI';
+				$reason     = (string) $ai['reason'];
+				$ai_bucket  = $this->map_ai_category_to_bucket( (string) $ai['category'] );
+				$bucket     = $ai_bucket;
+			}
+		}
+
+		$target = $this->resolve_smart_target( $bucket, $config );
+
+		if ( 'skip' === $target['action'] ) {
+			if ( $entry_id > 0 ) {
+				$this->add_note(
+					$entry_id,
+					$this->format_smart_routing_note( 'spam', $engine, false, $reason, $kw ),
+					'note'
+				);
+			}
+
+			return 'skip';
+		}
+
+		$built = $this->build_smart_job_payload( $target['module'], $feed, $entry, $form, $target['tags'], $target['team_id'], (string) rgar( $config, 'helpdesk_desc_field', 'description' ) );
+
+		if ( $entry_id > 0 ) {
+			$this->add_note(
+				$entry_id,
+				$this->format_smart_routing_note( $target['effective_bucket'], $engine, false, $reason, $kw ),
+				'note'
+			);
+		}
+
+		return array(
+			'feed_id'      => $feed_id,
+			'entry_id'     => $entry_id,
+			'form_id'      => $form_id,
+			'module'       => $built['module'],
+			'attempt'      => max( 1, (int) rgar( $payload, 'attempt', 1 ) ),
+			'sync_payload' => $built['sync_payload'],
+			'form_title'   => (string) rgar( $form, 'title' ),
+		);
+	}
+
+	/**
+	 * Map an AI category string to an internal bucket.
+	 *
+	 * @param string $category spam_vendor|sales_lead|support.
+	 *
+	 * @return string
+	 */
+	private function map_ai_category_to_bucket( string $category ): string {
+		switch ( $category ) {
+			case 'spam_vendor':
+				return GF_Odoo_Lead_Classifier::SPAM;
+			case 'support':
+				return GF_Odoo_Lead_Classifier::SUPPORT;
+			case 'sales_lead':
+				return GF_Odoo_Lead_Classifier::SALES;
+			default:
+				return GF_Odoo_Lead_Classifier::SALES;
+		}
+	}
+
+	/**
+	 * Build a human-readable entry note describing a routing decision.
+	 *
+	 * @param string $bucket Effective bucket (sales|support|support-review|unsure|spam).
+	 * @param string $engine 'keyword' or 'AI'.
+	 * @param bool   $log_only Whether this is a log-only (would-be) note.
+	 * @param string $reason AI reason (optional).
+	 * @param array  $kw     Keyword result (for matched terms).
+	 *
+	 * @return string
+	 */
+	private function format_smart_routing_note( string $bucket, string $engine, bool $log_only, string $reason, array $kw ): string {
+		$labels = array(
+			'sales'          => esc_html__( 'SALES (CRM lead)', 'gf-odoo-connector' ),
+			'support'        => esc_html__( 'SUPPORT (Helpdesk ticket)', 'gf-odoo-connector' ),
+			'support-review' => esc_html__( 'SUPPORT (no default team, routed to CRM lead flagged for review)', 'gf-odoo-connector' ),
+			'unsure'         => esc_html__( 'UNSURE (CRM lead flagged for review)', 'gf-odoo-connector' ),
+			'spam'           => esc_html__( 'SPAM / VENDOR (not synced to Odoo)', 'gf-odoo-connector' ),
+		);
+
+		$label  = $labels[ $bucket ] ?? strtoupper( $bucket );
+		$engine_label = 'AI' === $engine ? esc_html__( 'AI', 'gf-odoo-connector' ) : esc_html__( 'keyword', 'gf-odoo-connector' );
+
+		$prefix = $log_only
+			? esc_html__( 'Smart routing (log only, %1$s): would route to %2$s.', 'gf-odoo-connector' )
+			: esc_html__( 'Smart routing (%1$s): %2$s.', 'gf-odoo-connector' );
+
+		$note = sprintf( $prefix, $engine_label, $label );
+
+		if ( 'AI' === $engine && '' !== trim( $reason ) ) {
+			$note .= ' ' . sprintf(
+				/* translators: %s: short AI reason */
+				esc_html__( 'Reason: %s', 'gf-odoo-connector' ),
+				$reason
+			);
+		}
+
+		if ( 'keyword' === $engine ) {
+			$matched = array();
+			foreach ( (array) ( $kw['matched'] ?? array() ) as $terms ) {
+				foreach ( (array) $terms as $term ) {
+					$matched[] = $term;
+				}
+			}
+			$matched = array_slice( array_values( array_unique( $matched ) ), 0, 8 );
+
+			if ( ! empty( $matched ) ) {
+				$note .= ' ' . sprintf(
+					/* translators: %s: comma-separated matched keywords */
+					esc_html__( 'Matched: %s', 'gf-odoo-connector' ),
+					implode( ', ', $matched )
+				);
+			}
+		}
+
+		return $note;
+	}
+
+	/**
 	 * Rebuild payload from GF entry when older errors have no stored JSON (e.g. connection failed before mapping).
 	 *
 	 * @param array $row Error log row.
@@ -7039,6 +8509,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			'retrying' => __( 'Retrying', 'gf-odoo-connector' ),
 			'success'  => __( 'Success', 'gf-odoo-connector' ),
 			'failed'   => __( 'Failed', 'gf-odoo-connector' ),
+			'skipped'  => __( 'Skipped (smart routing)', 'gf-odoo-connector' ),
 		);
 
 		return $labels[ $status ] ?? ucfirst( $status );
@@ -7659,6 +9130,13 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	 */
 	public function render_webhook_settings_page(): void {
 		$this->render_plugin_settings_subset( 'webhook', __( 'Webhook receiver', 'gf-odoo-connector' ) );
+	}
+
+	/**
+	 * Smart routing (Beta) settings page.
+	 */
+	public function render_smart_routing_page(): void {
+		$this->render_plugin_settings_subset( 'smart_routing', __( 'Smart routing (Beta)', 'gf-odoo-connector' ) );
 	}
 
 	/**
