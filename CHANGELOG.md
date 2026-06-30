@@ -2,6 +2,13 @@
 
 All notable changes to GF Odoo Connector are documented here.
 
+## [1.2.1] - 2026-06-30
+
+### Changed
+
+- Reworked the admin submenu into a clean flat layout with subtle group dividers (removed the faint section labels and reordered items by everyday use).
+- Removed em dashes across the plugin UI, code, and docs in favour of clearer punctuation.
+
 ## [1.2.0] - 2026-06-30
 
 ### Added
