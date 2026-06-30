@@ -2,6 +2,12 @@
 
 All notable changes to GF Odoo Connector are documented here.
 
+## [1.1.2] — 2026-06-30
+
+### Fixed
+
+- Industry mapping: "Corporate & Enterprise" (and any value not in the static map) no longer fails to sync — the industry map was synced to the current Odoo `res.partner.industry` list (added "Corporate & Enterprise", "Others", "Paramedical"; removed stale "ODM"/"Online")
+
 ## [1.1.1] — 2026-06-22
 
 ### Added

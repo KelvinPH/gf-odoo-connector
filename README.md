@@ -2,7 +2,7 @@
 
 Connect [Gravity Forms](https://www.gravityforms.com/) to [Odoo](https://www.odoo.com/) CRM and Helpdesk. Form submissions are synced automatically to Odoo as leads, contacts, and support tickets.
 
-- **Version:** 1.1.1
+- **Version:** 1.1.2
 - **Requires:** WordPress 6.4+ · Gravity Forms 2.5+ · PHP 8.0+
 - **Tested with:** Odoo 19 Enterprise
 - **License:** GPL-2.0-or-later
@@ -111,6 +111,9 @@ It reads `entry_id` from the URL automatically (e.g. a confirmation redirect to 
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history. Latest:
+
+### 1.1.2
+- Fixed industry mapping for "Corporate & Enterprise"; synced the industry list to current Odoo values.
 
 ### 1.1.1
 - Added a **"Force on all forms"** option for global CRM assignment.

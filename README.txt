@@ -4,7 +4,7 @@ Tags: gravity forms, odoo, crm, helpdesk, integration
 Requires at least: 6.4
 Tested up to: 6.6
 Requires PHP: 8.0
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -77,6 +77,9 @@ Templates allow you to configure a feed once and apply it to multiple forms.
 4. Create a webhook for helpdesk.ticket or crm.lead with your URL and secret
 
 == Changelog ==
+
+= 1.1.2 =
+* Fixed industry mapping for "Corporate & Enterprise" and synced the industry list to current Odoo values
 
 = 1.1.1 =
 * Added "Force on all forms" option for global CRM assignment (overrides per-form salesperson and sales team)
