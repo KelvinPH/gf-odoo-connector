@@ -2,7 +2,7 @@
 
 Connect [Gravity Forms](https://www.gravityforms.com/) to [Odoo](https://www.odoo.com/) CRM and Helpdesk. Form submissions are synced automatically to Odoo as leads, contacts, and support tickets.
 
-- **Version:** 1.4.0
+- **Version:** 1.4.1
 - **Requires:** WordPress 6.4+ · Gravity Forms 2.5+ · PHP 8.0+
 - **Tested with:** Odoo 19 Enterprise
 - **License:** GPL-2.0-or-later
@@ -130,6 +130,9 @@ How it works:
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history. Latest:
+
+### 1.4.1
+- Fixed false-positive ticket category warning when Inquiry Category syncs correctly to Odoo; smart routing no longer labelled Beta.
 
 ### 1.4.0
 - Helpdesk feed configurator for InBody Europe ticket fields, HTML overview table in Issue Description, auto-detect issue field by Odoo label, product/category tag maps, and helpdesk teams from Odoo.

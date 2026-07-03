@@ -2,6 +2,16 @@
 
 All notable changes to GF Odoo Connector are documented here.
 
+## [1.4.1] - 2026-07-03
+
+### Fixed
+
+- False-positive "ticket category could not be matched" warning on Gravity Forms entries when the category syncs correctly to Odoo (known hex refs and mapped labels are no longer flagged as unresolved).
+
+### Changed
+
+- Smart routing settings and menu no longer labelled Beta; experimental banner removed.
+
 ## [1.4.0] - 2026-07-03
 
 ### Added
@@ -15,7 +25,6 @@ All notable changes to GF Odoo Connector are documented here.
 ### Changed
 
 - Smart routing ticket body field defaults to Auto (Issue Description) instead of `description`.
-- Smart lead routing is no longer labelled Beta; the experimental banner is removed from settings.
 
 ## [1.3.0] - 2026-06-30
 
