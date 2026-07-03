@@ -56,6 +56,17 @@ class Helpdesk_Field_Config {
 				'odoo_model'  => 'helpdesk.ticket.type',
 			),
 			array(
+				'key'        => 'ticket_category',
+				'label'      => __( 'Ticket category', 'gf-odoo-connector' ),
+				'section'    => 'ticket',
+				'odoo_field' => 'category_id',
+				'modes'      => array( 'field', 'fixed', 'off' ),
+				'required'   => false,
+				'fixed_type' => 'static_select',
+				'resolver'   => 'ticket_category',
+				'odoo_model' => 'helpdesk.ticket.category',
+			),
+			array(
 				'key'         => 'ticket_team',
 				'label'       => __( 'Helpdesk team', 'gf-odoo-connector' ),
 				'section'     => 'ticket',
@@ -138,6 +149,16 @@ class Helpdesk_Field_Config {
 				'fixed_type' => 'text',
 			),
 			// Product: visitor-filled.
+			array(
+				'key'        => 'ticket_product_model',
+				'label'      => __( 'Product model', 'gf-odoo-connector' ),
+				'section'    => 'product',
+				'odoo_field' => 'tag_ids',
+				'modes'      => array( 'field', 'fixed', 'off' ),
+				'required'   => false,
+				'fixed_type' => 'static_select',
+				'resolver'   => 'product_tag',
+			),
 			array(
 				'key'        => 'ticket_serial',
 				'label'      => __( 'Serial number', 'gf-odoo-connector' ),

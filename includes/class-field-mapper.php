@@ -334,6 +334,67 @@ class Field_Mapper {
 
 				return $id;
 
+			case 'product_tag':
+				if ( ! class_exists( 'GF_Odoo_Product_Tag_Map' ) ) {
+					$fallback = trim( $raw_value );
+
+					return '' !== $fallback ? $fallback : null;
+				}
+
+				$ref = GF_Odoo_Product_Tag_Map::resolve( $raw_value );
+
+				if ( null !== $ref ) {
+					return $ref;
+				}
+
+				// Backup: pass the device label through for live Odoo name lookup.
+				$fallback = trim( $raw_value );
+
+				if ( '' !== $fallback ) {
+					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+					error_log(
+						sprintf(
+							'[GF Odoo Connector] Product model "%s" not in static map; trying Odoo tag name lookup. Entry ID: %s',
+							$fallback,
+							$this->entry['id'] ?? 'unknown'
+						)
+					);
+
+					return $fallback;
+				}
+
+				return null;
+
+			case 'ticket_category':
+				if ( ! class_exists( 'GF_Odoo_Ticket_Category_Map' ) ) {
+					$fallback = trim( $raw_value );
+
+					return '' !== $fallback ? $fallback : null;
+				}
+
+				$ref = GF_Odoo_Ticket_Category_Map::resolve( $raw_value );
+
+				if ( null !== $ref ) {
+					return $ref;
+				}
+
+				$fallback = trim( $raw_value );
+
+				if ( '' !== $fallback ) {
+					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+					error_log(
+						sprintf(
+							'[GF Odoo Connector] Ticket category "%s" not in static map; trying Odoo name lookup. Entry ID: %s',
+							$fallback,
+							$this->entry['id'] ?? 'unknown'
+						)
+					);
+
+					return $fallback;
+				}
+
+				return null;
+
 			default:
 				return $raw_value;
 		}
@@ -484,6 +545,12 @@ class Field_Mapper {
 		}
 
 		if ( 'static_select' === $fixed_type && in_array( $mode, array( 'field', 'fixed' ), true ) ) {
+			$resolver = (string) rgar( $row, 'resolver', '' );
+
+			if ( '' !== $resolver ) {
+				return $this->apply_resolver( $resolver, is_scalar( $value ) ? (string) $value : '' );
+			}
+
 			if ( is_numeric( $value ) ) {
 				$int_value = (int) $value;
 				return $int_value > 0 ? $int_value : null;
@@ -557,6 +624,14 @@ class Field_Mapper {
 
 		if ( 'industry' === (string) rgar( $row, 'resolver', '' ) && class_exists( 'GF_Odoo_Industry_Map' ) ) {
 			return GF_Odoo_Industry_Map::resolve( $raw );
+		}
+
+		if ( 'product_tag' === (string) rgar( $row, 'resolver', '' ) && class_exists( 'GF_Odoo_Product_Tag_Map' ) ) {
+			return GF_Odoo_Product_Tag_Map::resolve( $raw );
+		}
+
+		if ( 'ticket_category' === (string) rgar( $row, 'resolver', '' ) && class_exists( 'GF_Odoo_Ticket_Category_Map' ) ) {
+			return GF_Odoo_Ticket_Category_Map::resolve( $raw );
 		}
 
 		$model = (string) rgar( $row, 'odoo_model', '' );

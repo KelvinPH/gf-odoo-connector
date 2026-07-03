@@ -291,6 +291,26 @@ class Helpdesk_Handler {
 			$data['under_warranty'] = (bool) $data['under_warranty'];
 		}
 
+		if ( ! empty( $data['tag_ids'] ) && ! is_array( $data['tag_ids'] ) ) {
+			$tag_id = $this->resolve_helpdesk_tag_id( (string) $data['tag_ids'] );
+
+			if ( $tag_id > 0 ) {
+				$data['tag_ids'] = array( array( 6, 0, array( $tag_id ) ) );
+			} else {
+				unset( $data['tag_ids'] );
+			}
+		}
+
+		if ( ! empty( $data['category_id'] ) && ! is_numeric( $data['category_id'] ) ) {
+			$category_id = $this->resolve_ticket_category_id( (string) $data['category_id'] );
+
+			if ( $category_id > 0 ) {
+				$data['category_id'] = $category_id;
+			} else {
+				unset( $data['category_id'] );
+			}
+		}
+
 		$id = $this->extract_record_id(
 			$this->api->call( 'helpdesk.ticket', 'create', array( $data ) )
 		);
@@ -348,6 +368,414 @@ class Helpdesk_Handler {
 		}
 
 		return '<p>' . nl2br( esc_html( $text ), false ) . '</p>';
+	}
+
+	/**
+	 * Resolve a product tag value to a helpdesk.tag database ID for tag_ids.
+	 *
+	 * Accepts tag slugs (tag_24), numeric IDs (24), or device labels (BPBIO 320).
+	 * Tries, in order: static map → xml id lookup → id match → live name search.
+	 *
+	 * @param string $input Raw mapped value.
+	 *
+	 * @return int helpdesk.tag ID, or 0 when not found.
+	 */
+	private function resolve_helpdesk_tag_id( string $input ): int {
+		$input = trim( $input );
+
+		if ( '' === $input ) {
+			return 0;
+		}
+
+		$cache_key = 'gf_odoo_hd_tag_' . md5( strtolower( $input ) );
+		$cached    = get_transient( $cache_key );
+
+		if ( false !== $cached && (int) $cached > 0 ) {
+			return (int) $cached;
+		}
+
+		$candidates = array( $input );
+
+		if ( class_exists( 'GF_Odoo_Product_Tag_Map' ) ) {
+			$slug = GF_Odoo_Product_Tag_Map::resolve( $input );
+
+			if ( null !== $slug && $slug !== $input ) {
+				$candidates[] = $slug;
+			}
+		}
+
+		foreach ( array_unique( $candidates ) as $candidate ) {
+			$tag_id = $this->resolve_helpdesk_tag_candidate( (string) $candidate );
+
+			if ( $tag_id > 0 ) {
+				set_transient( $cache_key, $tag_id, HOUR_IN_SECONDS );
+
+				return $tag_id;
+			}
+		}
+
+		$tag_id = $this->find_helpdesk_tag_by_name( $input );
+
+		if ( $tag_id > 0 ) {
+			set_transient( $cache_key, $tag_id, HOUR_IN_SECONDS );
+		}
+
+		return $tag_id;
+	}
+
+	/**
+	 * Resolve one candidate (tag_24, 24, or a slug from the static map).
+	 *
+	 * @param string $candidate Tag slug or numeric string.
+	 *
+	 * @return int
+	 */
+	private function resolve_helpdesk_tag_candidate( string $candidate ): int {
+		$candidate = trim( $candidate );
+
+		if ( '' === $candidate ) {
+			return 0;
+		}
+
+		if ( preg_match( '/^tag_(\d+)$/i', $candidate, $matches ) ) {
+			return $this->resolve_helpdesk_tag_by_number( (int) $matches[1], strtolower( $candidate ) );
+		}
+
+		if ( is_numeric( $candidate ) ) {
+			return $this->resolve_helpdesk_tag_by_number( (int) $candidate, 'tag_' . (int) $candidate );
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Look up helpdesk.tag by export xml id, then by database id.
+	 *
+	 * @param int    $number   Tag number from tag_24 or bare 24.
+	 * @param string $slug_key Cache key suffix (e.g. tag_24).
+	 *
+	 * @return int
+	 */
+	private function resolve_helpdesk_tag_by_number( int $number, string $slug_key ): int {
+		if ( $number <= 0 ) {
+			return 0;
+		}
+
+		$cache_key = 'gf_odoo_hd_tag_' . $slug_key;
+		$cached    = get_transient( $cache_key );
+
+		if ( false !== $cached && (int) $cached > 0 ) {
+			return (int) $cached;
+		}
+
+		$xml_names = array(
+			'helpdesk_tag_' . $number,
+			'tag_' . $number,
+		);
+
+		foreach ( $xml_names as $xml_name ) {
+			try {
+				$rows = $this->api->call(
+					'ir.model.data',
+					'search_read',
+					array(
+						array(
+							array( 'name', '=', $xml_name ),
+							array( 'model', '=', 'helpdesk.tag' ),
+						),
+					),
+					array(
+						'fields' => array( 'res_id' ),
+						'limit'  => 1,
+					)
+				);
+
+				if ( ! empty( $rows[0]['res_id'] ) ) {
+					$id = (int) $rows[0]['res_id'];
+					set_transient( $cache_key, $id, HOUR_IN_SECONDS );
+
+					return $id;
+				}
+			} catch ( Exception $e ) {
+				continue;
+			}
+		}
+
+		try {
+			$tags = $this->api->call(
+				'helpdesk.tag',
+				'search_read',
+				array(
+					array(
+						array( 'id', '=', $number ),
+					),
+				),
+				array(
+					'fields' => array( 'id' ),
+					'limit'  => 1,
+				)
+			);
+
+			if ( ! empty( $tags[0]['id'] ) ) {
+				$id = (int) $tags[0]['id'];
+				set_transient( $cache_key, $id, HOUR_IN_SECONDS );
+
+				return $id;
+			}
+		} catch ( Exception $e ) {
+			return 0;
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Last-resort lookup: match helpdesk.tag by its display name in Odoo.
+	 *
+	 * @param string $name Device label, e.g. BPBIO 320.
+	 *
+	 * @return int
+	 */
+	private function find_helpdesk_tag_by_name( string $name ): int {
+		$name = trim( $name );
+
+		if ( '' === $name ) {
+			return 0;
+		}
+
+		try {
+			$tags = $this->api->call(
+				'helpdesk.tag',
+				'search_read',
+				array(
+					array(
+						array( 'name', '=', $name ),
+					),
+				),
+				array(
+					'fields' => array( 'id' ),
+					'limit'  => 1,
+				)
+			);
+
+			if ( ! empty( $tags[0]['id'] ) ) {
+				return (int) $tags[0]['id'];
+			}
+		} catch ( Exception $e ) {
+			return 0;
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Resolve a ticket category value to a category_id for helpdesk.ticket.
+	 *
+	 * Accepts category slugs (category_12), numeric IDs (12), or labels (Malfunction).
+	 *
+	 * @param string $input Raw mapped value.
+	 *
+	 * @return int Category record ID, or 0 when not found.
+	 */
+	private function resolve_ticket_category_id( string $input ): int {
+		$input = trim( $input );
+
+		if ( '' === $input ) {
+			return 0;
+		}
+
+		$cache_key = 'gf_odoo_ticket_cat_' . md5( strtolower( $input ) );
+		$cached    = get_transient( $cache_key );
+
+		if ( false !== $cached && (int) $cached > 0 ) {
+			return (int) $cached;
+		}
+
+		$candidates = array( $input );
+
+		if ( class_exists( 'GF_Odoo_Ticket_Category_Map' ) ) {
+			$slug = GF_Odoo_Ticket_Category_Map::resolve( $input );
+
+			if ( null !== $slug && $slug !== $input ) {
+				$candidates[] = $slug;
+			}
+		}
+
+		foreach ( array_unique( $candidates ) as $candidate ) {
+			$category_id = $this->resolve_ticket_category_candidate( (string) $candidate );
+
+			if ( $category_id > 0 ) {
+				set_transient( $cache_key, $category_id, HOUR_IN_SECONDS );
+
+				return $category_id;
+			}
+		}
+
+		$category_id = $this->find_ticket_category_by_name( $input );
+
+		if ( $category_id > 0 ) {
+			set_transient( $cache_key, $category_id, HOUR_IN_SECONDS );
+		}
+
+		return $category_id;
+	}
+
+	/**
+	 * @param string $candidate Category slug or numeric string.
+	 *
+	 * @return int
+	 */
+	private function resolve_ticket_category_candidate( string $candidate ): int {
+		$candidate = trim( $candidate );
+
+		if ( '' === $candidate ) {
+			return 0;
+		}
+
+		if ( preg_match( '/^category_(\d+)$/i', $candidate, $matches ) ) {
+			return $this->resolve_ticket_category_by_number( (int) $matches[1], strtolower( $candidate ) );
+		}
+
+		if ( is_numeric( $candidate ) ) {
+			return $this->resolve_ticket_category_by_number( (int) $candidate, 'category_' . (int) $candidate );
+		}
+
+		return 0;
+	}
+
+	/**
+	 * @param int    $number   Category number from category_12 or bare 12.
+	 * @param string $slug_key Cache key suffix.
+	 *
+	 * @return int
+	 */
+	private function resolve_ticket_category_by_number( int $number, string $slug_key ): int {
+		if ( $number <= 0 ) {
+			return 0;
+		}
+
+		$cache_key = 'gf_odoo_ticket_cat_' . $slug_key;
+		$cached    = get_transient( $cache_key );
+
+		if ( false !== $cached && (int) $cached > 0 ) {
+			return (int) $cached;
+		}
+
+		$xml_names = array(
+			'ticket_category_' . $number,
+			'category_' . $number,
+		);
+
+		foreach ( $xml_names as $xml_name ) {
+			foreach ( $this->ticket_category_models() as $model ) {
+				try {
+					$rows = $this->api->call(
+						'ir.model.data',
+						'search_read',
+						array(
+							array(
+								array( 'name', '=', $xml_name ),
+								array( 'model', '=', $model ),
+							),
+						),
+						array(
+							'fields' => array( 'res_id' ),
+							'limit'  => 1,
+						)
+					);
+
+					if ( ! empty( $rows[0]['res_id'] ) ) {
+						$id = (int) $rows[0]['res_id'];
+						set_transient( $cache_key, $id, HOUR_IN_SECONDS );
+
+						return $id;
+					}
+				} catch ( Exception $e ) {
+					continue;
+				}
+			}
+		}
+
+		foreach ( $this->ticket_category_models() as $model ) {
+			try {
+				$records = $this->api->call(
+					$model,
+					'search_read',
+					array(
+						array(
+							array( 'id', '=', $number ),
+						),
+					),
+					array(
+						'fields' => array( 'id' ),
+						'limit'  => 1,
+					)
+				);
+
+				if ( ! empty( $records[0]['id'] ) ) {
+					$id = (int) $records[0]['id'];
+					set_transient( $cache_key, $id, HOUR_IN_SECONDS );
+
+					return $id;
+				}
+			} catch ( Exception $e ) {
+				continue;
+			}
+		}
+
+		return 0;
+	}
+
+	/**
+	 * @param string $name Category display name.
+	 *
+	 * @return int
+	 */
+	private function find_ticket_category_by_name( string $name ): int {
+		$name = trim( $name );
+
+		if ( '' === $name ) {
+			return 0;
+		}
+
+		foreach ( $this->ticket_category_models() as $model ) {
+			try {
+				$records = $this->api->call(
+					$model,
+					'search_read',
+					array(
+						array(
+							array( 'name', '=', $name ),
+						),
+					),
+					array(
+						'fields' => array( 'id' ),
+						'limit'  => 1,
+					)
+				);
+
+				if ( ! empty( $records[0]['id'] ) ) {
+					return (int) $records[0]['id'];
+				}
+			} catch ( Exception $e ) {
+				continue;
+			}
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Odoo models that may store ticket categories.
+	 *
+	 * @return array<int, string>
+	 */
+	private function ticket_category_models(): array {
+		return array(
+			'helpdesk.ticket.category',
+			'ticket.category',
+			'helpdesk.ticket.type',
+		);
 	}
 
 	/**

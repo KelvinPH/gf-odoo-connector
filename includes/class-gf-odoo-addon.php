@@ -4464,7 +4464,42 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	 * @return array<int, array<string, mixed>>
 	 */
 	public function helpdesk_field_rows(): array {
-		return Helpdesk_Field_Config::rows();
+		$rows = Helpdesk_Field_Config::rows();
+
+		foreach ( $rows as $index => $row ) {
+			$key = (string) ( $row['key'] ?? '' );
+
+			if ( 'ticket_product_model' === $key && class_exists( 'GF_Odoo_Product_Tag_Map' ) ) {
+				$choices = array();
+
+				foreach ( GF_Odoo_Product_Tag_Map::get_all() as $choice ) {
+					$choices[] = array(
+						'value' => (string) $choice['tag_ref'],
+						'label' => (string) $choice['label'],
+					);
+				}
+
+				$row['fixed_choices'] = $choices;
+				$rows[ $index ]       = $row;
+				continue;
+			}
+
+			if ( 'ticket_category' === $key && class_exists( 'GF_Odoo_Ticket_Category_Map' ) ) {
+				$choices = array();
+
+				foreach ( GF_Odoo_Ticket_Category_Map::get_all() as $choice ) {
+					$choices[] = array(
+						'value' => (string) $choice['category_ref'],
+						'label' => (string) $choice['label'],
+					);
+				}
+
+				$row['fixed_choices'] = $choices;
+				$rows[ $index ]       = $row;
+			}
+		}
+
+		return $rows;
 	}
 
 	/**
