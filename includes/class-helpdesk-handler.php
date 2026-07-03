@@ -52,6 +52,109 @@ class Helpdesk_Handler {
 	}
 
 	/**
+	 * Resolve the Odoo technical name for the Issue Description tab.
+	 *
+	 * Custom InBody forms often show standard "description" under Resolution;
+	 * Issue Description is a separate field whose label may not expose a tooltip.
+	 * We match fields_get labels (and field names as fallback) instead.
+	 *
+	 * @param string $explicit Feed/setting override. Empty or "auto" = detect from Odoo.
+	 *
+	 * @return string Technical field name, or empty when not found.
+	 */
+	public function resolve_issue_description_field( string $explicit = '' ): string {
+		$explicit = strtolower( trim( $explicit ) );
+
+		if ( '' !== $explicit && 'auto' !== $explicit ) {
+			return $explicit;
+		}
+
+		$cached = get_transient( 'gf_odoo_issue_desc_field' );
+
+		if ( is_string( $cached ) && '' !== $cached ) {
+			return $cached;
+		}
+
+		$fields     = $this->get_ticket_fields_metadata();
+		$candidates = array();
+
+		foreach ( $fields as $name => $meta ) {
+			$meta  = (array) $meta;
+			$type  = (string) rgar( $meta, 'type' );
+			$label = strtolower( trim( (string) rgar( $meta, 'string', '' ) ) );
+			$name_l = strtolower( (string) $name );
+
+			if ( ! in_array( $type, array( 'text', 'html', 'char' ), true ) ) {
+				continue;
+			}
+
+			// On customised instances "description" is Resolution, not Issue.
+			if ( 'description' === $name_l ) {
+				continue;
+			}
+
+			$score = 0;
+
+			if ( 'issue description' === $label ) {
+				$score = 100;
+			} elseif ( str_contains( $label, 'issue description' ) ) {
+				$score = 90;
+			} elseif ( str_contains( $label, 'issue desc' ) ) {
+				$score = 80;
+			} elseif ( str_contains( $name_l, 'issue' ) && str_contains( $name_l, 'desc' ) ) {
+				$score = 70;
+			} elseif ( str_contains( $name_l, 'issue' ) && 'html' === $type ) {
+				$score = 50;
+			}
+
+			if ( $score <= 0 ) {
+				continue;
+			}
+
+			if ( 'html' === $type ) {
+				$score += 5;
+			} elseif ( 'text' === $type ) {
+				$score += 2;
+			}
+
+			$candidates[] = array(
+				'name'  => (string) $name,
+				'score' => $score,
+			);
+		}
+
+		usort(
+			$candidates,
+			static function ( $a, $b ) {
+				return (int) $b['score'] <=> (int) $a['score'];
+			}
+		);
+
+		$resolved = isset( $candidates[0]['name'] ) ? (string) $candidates[0]['name'] : '';
+
+		if ( '' !== $resolved ) {
+			set_transient( 'gf_odoo_issue_desc_field', $resolved, DAY_IN_SECONDS );
+		}
+
+		return $resolved;
+	}
+
+	/**
+	 * @return array<int, string> helpdesk.ticket field names with type html.
+	 */
+	private function get_html_ticket_field_names(): array {
+		$names = array();
+
+		foreach ( $this->get_ticket_fields_metadata() as $name => $meta ) {
+			if ( 'html' === (string) rgar( (array) $meta, 'type' ) ) {
+				$names[] = (string) $name;
+			}
+		}
+
+		return $names;
+	}
+
+	/**
 	 * Fetch helpdesk teams for admin dropdowns.
 	 *
 	 * @return array<int, array{value: int, label: string}>
@@ -81,8 +184,8 @@ class Helpdesk_Handler {
 	 * @return array<int, array{value: int, label: string}>
 	 */
 	public function get_ticket_categories(): array {
-		$row   = Helpdesk_Field_Config::get_row( 'ticket_inquiry_category' );
-		$model = (string) rgar( $row, 'odoo_model', 'helpdesk.ticket.type' );
+		$row   = Helpdesk_Field_Config::get_row( 'ticket_category' );
+		$model = (string) rgar( $row, 'odoo_model', 'ticket.category' );
 
 		$fallback_models = array(
 			$model,
@@ -250,8 +353,8 @@ class Helpdesk_Handler {
 			);
 		}
 
-		if ( empty( $data['description'] ) ) {
-			$data['description'] = '<p></p>';
+		if ( empty( $data['description'] ) && array_key_exists( 'description', $data ) ) {
+			unset( $data['description'] );
 		}
 
 		if ( empty( $data['team_id'] ) ) {
@@ -283,8 +386,10 @@ class Helpdesk_Handler {
 			$data['partner_email'] = sanitize_email( (string) $data['partner_email'] );
 		}
 
-		if ( ! empty( $data['description'] ) && is_string( $data['description'] ) ) {
-			$data['description'] = $this->format_html_description( $data['description'] );
+		foreach ( $this->get_html_ticket_field_names() as $html_field ) {
+			if ( ! empty( $data[ $html_field ] ) && is_string( $data[ $html_field ] ) ) {
+				$data[ $html_field ] = $this->format_html_description( $data[ $html_field ] );
+			}
 		}
 
 		if ( array_key_exists( 'under_warranty', $data ) ) {
@@ -301,13 +406,40 @@ class Helpdesk_Handler {
 			}
 		}
 
-		if ( ! empty( $data['category_id'] ) && ! is_numeric( $data['category_id'] ) ) {
-			$category_id = $this->resolve_ticket_category_id( (string) $data['category_id'] );
+		foreach ( array( 'ticket_category_id', 'category_id' ) as $category_field ) {
+			if ( empty( $data[ $category_field ] ) || is_numeric( $data[ $category_field ] ) ) {
+				continue;
+			}
+
+			$category_id = $this->resolve_ticket_category_id( (string) $data[ $category_field ] );
 
 			if ( $category_id > 0 ) {
-				$data['category_id'] = $category_id;
+				$data['ticket_category_id'] = $category_id;
 			} else {
-				unset( $data['category_id'] );
+				unset( $data['ticket_category_id'] );
+			}
+
+			unset( $data[ $category_field ] );
+			break;
+		}
+
+		if ( ! empty( $data['customer_id'] ) && ! is_numeric( $data['customer_id'] ) ) {
+			$customer_id = $this->find_customer_company_id( (string) $data['customer_id'] );
+
+			if ( $customer_id > 0 ) {
+				$data['customer_id'] = $customer_id;
+			} else {
+				unset( $data['customer_id'] );
+			}
+		}
+
+		if ( ! empty( $data['serial_id'] ) && ! is_numeric( $data['serial_id'] ) ) {
+			$serial_id = $this->find_stock_lot_id( (string) $data['serial_id'] );
+
+			if ( $serial_id > 0 ) {
+				$data['serial_id'] = $serial_id;
+			} else {
+				unset( $data['serial_id'] );
 			}
 		}
 
@@ -772,10 +904,87 @@ class Helpdesk_Handler {
 	 */
 	private function ticket_category_models(): array {
 		return array(
-			'helpdesk.ticket.category',
 			'ticket.category',
+			'helpdesk.ticket.category',
 			'helpdesk.ticket.type',
 		);
+	}
+
+	/**
+	 * @param string $name Company name.
+	 *
+	 * @return int res.partner ID or 0.
+	 */
+	private function find_customer_company_id( string $name ): int {
+		$name = trim( $name );
+
+		if ( '' === $name ) {
+			return 0;
+		}
+
+		try {
+			$partners = $this->api->call(
+				'res.partner',
+				'search_read',
+				array(
+					array(
+						array( 'name', '=', $name ),
+						array( 'is_company', '=', true ),
+					),
+				),
+				array(
+					'fields' => array( 'id' ),
+					'limit'  => 1,
+				)
+			);
+
+			if ( ! empty( $partners[0]['id'] ) ) {
+				return (int) $partners[0]['id'];
+			}
+		} catch ( Exception $e ) {
+			return 0;
+		}
+
+		return 0;
+	}
+
+	/**
+	 * @param string $serial Serial number / lot name.
+	 *
+	 * @return int stock.lot ID or 0.
+	 */
+	private function find_stock_lot_id( string $serial ): int {
+		$serial = trim( $serial );
+
+		if ( '' === $serial ) {
+			return 0;
+		}
+
+		foreach ( array( 'name', 'ref' ) as $field ) {
+			try {
+				$lots = $this->api->call(
+					'stock.lot',
+					'search_read',
+					array(
+						array(
+							array( $field, '=', $serial ),
+						),
+					),
+					array(
+						'fields' => array( 'id' ),
+						'limit'  => 1,
+					)
+				);
+
+				if ( ! empty( $lots[0]['id'] ) ) {
+					return (int) $lots[0]['id'];
+				}
+			} catch ( Exception $e ) {
+				continue;
+			}
+		}
+
+		return 0;
 	}
 
 	/**

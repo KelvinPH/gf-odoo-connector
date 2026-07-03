@@ -1637,7 +1637,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			'smart_routing_spam_threshold'   => '2',
 			'smart_routing_confidence_threshold' => '2',
 			'smart_routing_helpdesk_team_id' => '',
-			'smart_routing_helpdesk_desc_field' => 'description',
+			'smart_routing_helpdesk_desc_field' => 'auto',
 			'smart_routing_review_tag'       => 'Needs review',
 			'smart_routing_web_lead_tag'     => '',
 			'smart_routing_ai_provider'      => 'mistral',
@@ -2133,11 +2133,32 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			$fields   = $helpdesk->get_ticket_fields_metadata();
 			$lines    = $this->format_helpdesk_fields_debug_list( $fields );
 
+			delete_transient( 'gf_odoo_issue_desc_field' );
+			$issue_field = $helpdesk->resolve_issue_description_field( 'auto' );
+
 			set_transient( 'gf_odoo_helpdesk_fields_debug', $fields, HOUR_IN_SECONDS );
+
+			$html = '';
+
+			if ( '' !== $issue_field ) {
+				$html .= '<p><strong>'
+					. sprintf(
+						/* translators: %s: Odoo technical field name */
+						esc_html__( 'Auto-detected Issue Description field: %s', 'gf-odoo-connector' ),
+						esc_html( $issue_field )
+					)
+					. '</strong></p>';
+			} else {
+				$html .= '<p><em>'
+					. esc_html__( 'Could not auto-detect an Issue Description field. Look for a text/html field labeled “Issue Description” below and set it manually on the feed.', 'gf-odoo-connector' )
+					. '</em></p>';
+			}
+
+			$html .= $this->render_helpdesk_fields_debug_html( $lines );
 
 			wp_send_json_success(
 				array(
-					'html'  => $this->render_helpdesk_fields_debug_html( $lines ),
+					'html'  => $html,
 					'count' => count( $lines ),
 				)
 			);
@@ -2794,11 +2815,11 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 					'name'          => 'smart_routing_helpdesk_desc_field',
 					'label'         => esc_html__( 'Ticket body field', 'gf-odoo-connector' ),
 					'type'          => 'select',
-					'default_value' => 'description',
+					'default_value' => 'auto',
 					'choices'       => $this->get_helpdesk_text_field_choices(),
 					'class'         => 'medium',
-					'tooltip'       => esc_html__( 'The list is read live from your Odoo. Pick the field that shows as "Issue Description" on the ticket form so the visitor\'s message lands in the right tab.', 'gf-odoo-connector' ),
-					'description'   => esc_html__( 'Which Odoo ticket field receives the visitor\'s message. Pick the one shown as "Issue Description" on your helpdesk form (the standard "description" field may be used for Resolution on customised instances).', 'gf-odoo-connector' ),
+					'tooltip'       => esc_html__( 'Auto picks the Odoo field labeled “Issue Description”. On customised forms the standard description field is often Resolution instead.', 'gf-odoo-connector' ),
+					'description'   => esc_html__( 'Where the visitor message lands on the ticket. Leave on Auto unless you need to override — no developer tooltip required.', 'gf-odoo-connector' ),
 				),
 				array(
 					'name'          => 'smart_routing_review_tag',
@@ -3153,14 +3174,44 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			array(
 				'title'       => esc_html__( 'Ticket fields', 'gf-odoo-connector' ),
 				'description' => esc_html__(
-					'Subject, description, inquiry category, and helpdesk team.',
+					'Map the subject, ticket category, helpdesk team (loaded from Odoo), and visitor message. The HTML overview table is written to the Issue Description field you pick below.',
 					'gf-odoo-connector'
 				),
 				'dependency'  => array(
 					'field'  => 'module',
 					'values' => array( 'helpdesk' ),
 				),
-				'fields'      => $this->helpdesk_section_settings_fields( 'ticket' ),
+				'fields'      => array_merge(
+					array(
+						array(
+							'name'          => 'helpdesk_issue_desc_field',
+							'label'         => esc_html__( 'Issue description field', 'gf-odoo-connector' ),
+							'type'          => 'select',
+							'default_value' => 'auto',
+							'choices'       => $this->get_helpdesk_text_field_choices(),
+							'class'         => 'medium',
+							'description'   => esc_html__(
+								'Auto detects the Odoo field labeled “Issue Description” via the API (no developer tooltip needed). Override only if Auto picks the wrong field.',
+								'gf-odoo-connector'
+							),
+						),
+						array(
+							'name'    => 'helpdesk_description_table',
+							'label'   => esc_html__( 'Issue description layout', 'gf-odoo-connector' ),
+							'type'    => 'checkbox',
+							'choices' => array(
+								array(
+									'name'  => 'helpdesk_description_table',
+									'label' => esc_html__(
+										'Build an HTML overview table in the issue description (includes subject and all mapped fields)',
+										'gf-odoo-connector'
+									),
+								),
+							),
+						),
+					),
+					$this->helpdesk_section_settings_fields( 'ticket' )
+				),
 			),
 			array(
 				'title'       => esc_html__( 'Contact fields', 'gf-odoo-connector' ),
@@ -3453,7 +3504,11 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	private function get_helpdesk_text_field_choices(): array {
 		$choices = array(
 			array(
-				'label' => esc_html__( 'Description (standard)', 'gf-odoo-connector' ),
+				'label' => esc_html__( 'Auto (Odoo field labeled “Issue Description”)', 'gf-odoo-connector' ),
+				'value' => 'auto',
+			),
+			array(
+				'label' => esc_html__( 'Resolution description (description)', 'gf-odoo-connector' ),
 				'value' => 'description',
 			),
 		);
@@ -3489,6 +3544,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 
 			if ( ! empty( $cached ) ) {
 				asort( $cached );
+				delete_transient( 'gf_odoo_issue_desc_field' );
 				set_transient( 'gf_odoo_helpdesk_text_fields', $cached, self::ASSIGNMENT_CACHE_TTL );
 			}
 		}
@@ -3505,6 +3561,29 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		}
 
 		return $choices;
+	}
+
+	/**
+	 * Resolve Issue Description field (auto from Odoo labels, or explicit override).
+	 *
+	 * @param string $explicit Feed/setting value ("auto", empty, or technical name).
+	 *
+	 * @return string Technical field name, or empty when unknown.
+	 */
+	private function resolve_helpdesk_issue_field( string $explicit = '' ): string {
+		$explicit = strtolower( trim( $explicit ) );
+
+		if ( '' !== $explicit && 'auto' !== $explicit ) {
+			return $explicit;
+		}
+
+		$api = $this->get_odoo_api();
+
+		if ( null === $api ) {
+			return '';
+		}
+
+		return ( new Helpdesk_Handler( $api ) )->resolve_issue_description_field( 'auto' );
 	}
 
 	/**
@@ -4543,6 +4622,18 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 
 		$html = '<div class="' . esc_attr( $fields_class ) . '" data-section="' . esc_attr( $section ) . '">';
 
+		if ( 'ticket' === $section ) {
+			$html .= sprintf(
+				'<p class="description">%1$s <button type="button" class="button button-small" id="gf-odoo-refresh-helpdesk-teams">%2$s</button>'
+				. ' <span id="gf-odoo-helpdesk-teams-status" class="gf-odoo-test-result" role="status"></span></p>',
+				esc_html__(
+					'Helpdesk teams are loaded from Odoo. Use Fixed on Helpdesk team to pick one, or map a form field. Refresh if the list is empty.',
+					'gf-odoo-connector'
+				),
+				esc_html__( 'Refresh teams from Odoo', 'gf-odoo-connector' )
+			);
+		}
+
 		foreach ( $rows as $row ) {
 			$html .= $this->render_helpdesk_field_row_html( $row, $feed_meta, $form_id, $ctx );
 		}
@@ -5131,7 +5222,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		if ( array_key_exists( 'smart_routing_helpdesk_desc_field', $incoming ) ) {
 			$field_name = strtolower( trim( (string) $incoming['smart_routing_helpdesk_desc_field'] ) );
 			$field_name = preg_replace( '/[^a-z0-9_]/', '', $field_name );
-			$merged['smart_routing_helpdesk_desc_field'] = '' !== $field_name ? $field_name : 'description';
+			$merged['smart_routing_helpdesk_desc_field'] = '' !== $field_name ? $field_name : 'auto';
 		}
 
 		if ( array_key_exists( 'default_crm_user_id', $incoming ) ) {
@@ -7522,6 +7613,22 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			$ticket[ $field ] = $value;
 		}
 
+		$issue_field = trim( (string) rgars( $feed, 'meta/helpdesk_issue_desc_field' ) );
+		$issue_field = $this->resolve_helpdesk_issue_field( $issue_field );
+		$table_on    = ! empty( rgars( $feed, 'meta/helpdesk_description_table' ) );
+
+		if ( $table_on && '' !== $issue_field && class_exists( 'GF_Odoo_Helpdesk_Description_Builder' ) ) {
+			$table_html = GF_Odoo_Helpdesk_Description_Builder::build(
+				(string) ( $ticket['name'] ?? '' ),
+				$mapper->get_helpdesk_table_rows()
+			);
+
+			if ( '' !== $table_html ) {
+				unset( $ticket['description'] );
+				$ticket[ $issue_field ] = $table_html;
+			}
+		}
+
 		if ( empty( $ticket['name'] ) ) {
 			throw new InvalidArgumentException(
 				__( 'No ticket subject was configured. Set Ticket subject to Auto, From field, or Fixed.', 'gf-odoo-connector' )
@@ -7587,7 +7694,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			'spam_threshold'       => max( 1, (int) $value( 'smart_routing_spam_threshold', 2 ) ),
 			'confidence_threshold' => max( 1, (int) $value( 'smart_routing_confidence_threshold', 2 ) ),
 			'helpdesk_team_id'     => (int) $value( 'smart_routing_helpdesk_team_id', 0 ),
-			'helpdesk_desc_field'  => (string) $value( 'smart_routing_helpdesk_desc_field', 'description' ),
+			'helpdesk_desc_field'  => (string) $value( 'smart_routing_helpdesk_desc_field', 'auto' ),
 			'review_tag'           => (string) $value( 'smart_routing_review_tag', 'Needs review' ),
 			'web_lead_tag'         => (string) $value( 'smart_routing_web_lead_tag', '' ),
 			'ai_enabled'           => 'hybrid' === $engine,
@@ -7715,7 +7822,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			);
 		}
 
-		$built = $this->build_smart_job_payload( $target['module'], $feed, $entry, $form, $target['tags'], $target['team_id'], (string) rgar( $config, 'helpdesk_desc_field', 'description' ) );
+		$built = $this->build_smart_job_payload( $target['module'], $feed, $entry, $form, $target['tags'], $target['team_id'], (string) rgar( $config, 'helpdesk_desc_field', 'auto' ) );
 
 		$job = array(
 			'feed_id'      => (int) rgar( $feed, 'id' ),
@@ -7830,7 +7937,8 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	 *
 	 * @throws Exception When mapping fails.
 	 */
-	private function build_smart_job_payload( string $target_module, array $feed, array $entry, array $form, array $tags, int $team_id, string $issue_field = 'description' ): array {
+	private function build_smart_job_payload( string $target_module, array $feed, array $entry, array $form, array $tags, int $team_id, string $issue_field = 'auto' ): array {
+		$issue_field = $this->resolve_helpdesk_issue_field( $issue_field );
 		$feed_module = $this->get_feed_module( $feed );
 
 		$native = 'helpdesk' === $feed_module
@@ -8179,7 +8287,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			return 'skip';
 		}
 
-		$built = $this->build_smart_job_payload( $target['module'], $feed, $entry, $form, $target['tags'], $target['team_id'], (string) rgar( $config, 'helpdesk_desc_field', 'description' ) );
+		$built = $this->build_smart_job_payload( $target['module'], $feed, $entry, $form, $target['tags'], $target['team_id'], (string) rgar( $config, 'helpdesk_desc_field', 'auto' ) );
 
 		if ( $entry_id > 0 ) {
 			$this->add_note(

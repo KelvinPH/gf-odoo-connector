@@ -2,7 +2,7 @@
 /**
  * Helpdesk per-field mode definitions (single source of truth).
  *
- * Field names below match the InBody Europe helpdesk.ticket form.
+ * Field names match the InBody Europe helpdesk.ticket form (Odoo developer mode).
  * Run WP_DEBUG → "Debug: Fetch helpdesk.ticket fields" to verify via fields_get.
  *
  * @package GF_Odoo_Connector
@@ -34,37 +34,30 @@ class Helpdesk_Field_Config {
 				'required'   => true,
 				'auto_label' => __( 'Form title', 'gf-odoo-connector' ),
 				'fixed_type' => 'text',
+				'in_table'   => false,
 			),
 			array(
 				'key'        => 'ticket_description',
-				'label'      => __( 'Issue description', 'gf-odoo-connector' ),
+				'label'      => __( 'Visitor message', 'gf-odoo-connector' ),
 				'section'    => 'ticket',
-				'odoo_field' => 'description',
+				'odoo_field' => '',
+				'table_only' => true,
 				'modes'      => array( 'field', 'fixed', 'off' ),
 				'required'   => false,
 				'fixed_type' => 'text',
-			),
-			array(
-				'key'         => 'ticket_inquiry_category',
-				'label'       => __( 'Inquiry category', 'gf-odoo-connector' ),
-				'section'     => 'ticket',
-				'odoo_field'  => 'ticket_type_id',
-				'modes'       => array( 'field', 'fixed', 'off' ),
-				'required'    => false,
-				'fixed_type'  => 'odoo_select',
-				'ajax_action' => 'gf_odoo_get_ticket_categories',
-				'odoo_model'  => 'helpdesk.ticket.type',
+				'in_table'   => true,
 			),
 			array(
 				'key'        => 'ticket_category',
 				'label'      => __( 'Ticket category', 'gf-odoo-connector' ),
 				'section'    => 'ticket',
-				'odoo_field' => 'category_id',
+				'odoo_field' => 'ticket_category_id',
 				'modes'      => array( 'field', 'fixed', 'off' ),
 				'required'   => false,
 				'fixed_type' => 'static_select',
 				'resolver'   => 'ticket_category',
-				'odoo_model' => 'helpdesk.ticket.category',
+				'odoo_model' => 'ticket.category',
+				'in_table'   => true,
 			),
 			array(
 				'key'         => 'ticket_team',
@@ -76,6 +69,7 @@ class Helpdesk_Field_Config {
 				'fixed_type'  => 'odoo_select',
 				'ajax_action' => 'gf_odoo_get_helpdesk_teams',
 				'odoo_model'  => 'helpdesk.team',
+				'in_table'    => true,
 			),
 			array(
 				'key'         => 'ticket_branch',
@@ -87,8 +81,21 @@ class Helpdesk_Field_Config {
 				'fixed_type'  => 'odoo_select',
 				'ajax_action' => 'gf_odoo_get_branches',
 				'odoo_model'  => 'res.branch',
+				'in_table'    => true,
 			),
 			// Contact: visitor-filled.
+			array(
+				'key'        => 'contact_company',
+				'label'      => __( 'Company', 'gf-odoo-connector' ),
+				'section'    => 'contact',
+				'odoo_field' => 'customer_id',
+				'modes'      => array( 'field', 'fixed', 'off' ),
+				'required'   => false,
+				'fixed_type' => 'text',
+				'odoo_model' => 'res.partner',
+				'resolver'   => 'customer_company',
+				'in_table'   => true,
+			),
 			array(
 				'key'        => 'contact_name',
 				'label'      => __( 'Contact name', 'gf-odoo-connector' ),
@@ -97,15 +104,17 @@ class Helpdesk_Field_Config {
 				'modes'      => array( 'field', 'fixed', 'off' ),
 				'required'   => false,
 				'fixed_type' => 'text',
+				'in_table'   => true,
 			),
 			array(
 				'key'        => 'contact_email',
-				'label'      => __( 'Contact email', 'gf-odoo-connector' ),
+				'label'      => __( 'Email', 'gf-odoo-connector' ),
 				'section'    => 'contact',
 				'odoo_field' => 'partner_email',
 				'modes'      => array( 'field', 'fixed', 'off' ),
 				'required'   => false,
 				'fixed_type' => 'text',
+				'in_table'   => true,
 			),
 			array(
 				'key'        => 'contact_phone',
@@ -115,6 +124,7 @@ class Helpdesk_Field_Config {
 				'modes'      => array( 'field', 'fixed', 'off' ),
 				'required'   => false,
 				'fixed_type' => 'text',
+				'in_table'   => true,
 			),
 			array(
 				'key'         => 'ticket_state',
@@ -126,6 +136,7 @@ class Helpdesk_Field_Config {
 				'fixed_type'  => 'odoo_select',
 				'ajax_action' => 'gf_odoo_get_states',
 				'odoo_model'  => 'res.country.state',
+				'in_table'    => true,
 			),
 			array(
 				'key'         => 'ticket_country',
@@ -138,6 +149,7 @@ class Helpdesk_Field_Config {
 				'ajax_action' => 'gf_odoo_get_countries',
 				'odoo_model'  => 'res.country',
 				'resolver'    => 'country',
+				'in_table'    => true,
 			),
 			array(
 				'key'        => 'ticket_email_cc',
@@ -147,6 +159,7 @@ class Helpdesk_Field_Config {
 				'modes'      => array( 'field', 'fixed', 'off' ),
 				'required'   => false,
 				'fixed_type' => 'text',
+				'in_table'   => true,
 			),
 			// Product: visitor-filled.
 			array(
@@ -158,24 +171,29 @@ class Helpdesk_Field_Config {
 				'required'   => false,
 				'fixed_type' => 'static_select',
 				'resolver'   => 'product_tag',
+				'in_table'   => true,
 			),
 			array(
 				'key'        => 'ticket_serial',
 				'label'      => __( 'Serial number', 'gf-odoo-connector' ),
 				'section'    => 'product',
-				'odoo_field' => 'serial_number',
+				'odoo_field' => 'serial_id',
 				'modes'      => array( 'field', 'fixed', 'off' ),
 				'required'   => false,
 				'fixed_type' => 'text',
+				'odoo_model' => 'stock.lot',
+				'resolver'   => 'serial_lot',
+				'in_table'   => true,
 			),
 			array(
 				'key'        => 'ticket_di_number',
 				'label'      => __( 'DI number', 'gf-odoo-connector' ),
 				'section'    => 'product',
-				'odoo_field' => 'di_number',
+				'odoo_field' => 'di_no',
 				'modes'      => array( 'field', 'fixed', 'off' ),
 				'required'   => false,
 				'fixed_type' => 'text',
+				'in_table'   => true,
 			),
 			array(
 				'key'        => 'ticket_under_warranty',
@@ -185,6 +203,7 @@ class Helpdesk_Field_Config {
 				'modes'      => array( 'field', 'fixed', 'off' ),
 				'required'   => false,
 				'fixed_type' => 'boolean',
+				'in_table'   => true,
 			),
 			array(
 				'key'        => 'ticket_installation_date',
@@ -194,15 +213,17 @@ class Helpdesk_Field_Config {
 				'modes'      => array( 'field', 'fixed', 'off' ),
 				'required'   => false,
 				'fixed_type' => 'date',
+				'in_table'   => true,
 			),
 			array(
 				'key'        => 'ticket_manufacturing_date',
 				'label'      => __( 'Manufacturing date', 'gf-odoo-connector' ),
 				'section'    => 'product',
-				'odoo_field' => 'manufacturing_date',
+				'odoo_field' => 'manufacturer_date',
 				'modes'      => array( 'field', 'fixed', 'off' ),
 				'required'   => false,
 				'fixed_type' => 'date',
+				'in_table'   => true,
 			),
 		);
 	}
@@ -216,7 +237,17 @@ class Helpdesk_Field_Config {
 		$fields = array( 'partner_id' );
 
 		foreach ( self::rows() as $row ) {
-			$fields[] = (string) $row['odoo_field'];
+			if ( ! empty( $row['table_only'] ) ) {
+				continue;
+			}
+
+			$odoo_field = (string) ( $row['odoo_field'] ?? '' );
+
+			if ( '' === $odoo_field ) {
+				continue;
+			}
+
+			$fields[] = $odoo_field;
 		}
 
 		return array_values( array_unique( $fields ) );

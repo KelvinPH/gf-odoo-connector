@@ -3,7 +3,7 @@
  * Plugin Name:       GF Odoo Connector
  * Plugin URI:        https://github.com/KelvinPH/gf-odoo-connector
  * Description:       Connect Gravity Forms to Odoo CRM and Helpdesk. Sync form submissions to leads, contacts, and tickets.
- * Version:           1.3.0
+ * Version:           1.4.0
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            Kelvin Huurman
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'GF_ODOO_FILE', __FILE__ );
-define( 'GF_ODOO_VERSION', '1.3.0' );
+define( 'GF_ODOO_VERSION', '1.4.0' );
 define( 'GF_ODOO_PATH', plugin_dir_path( GF_ODOO_FILE ) );
 define( 'GF_ODOO_URL', plugin_dir_url( GF_ODOO_FILE ) );
 define( 'GF_ODOO_MIN_GF_VERSION', '2.5' );
@@ -64,6 +64,7 @@ function gf_odoo_connector_autoload( $class ) {
 		'Error_Logger'           => 'class-error-logger.php',
 		'CRM_Field_Config'       => 'class-crm-field-config.php',
 		'Helpdesk_Field_Config'  => 'class-helpdesk-field-config.php',
+		'GF_Odoo_Helpdesk_Description_Builder' => 'class-helpdesk-description-builder.php',
 		'GF_Odoo_Async_Sync'     => 'class-gf-odoo-async-sync.php',
 		'Webhook_Receiver'       => 'class-webhook-receiver.php',
 		'Dashboard'              => 'class-dashboard.php',

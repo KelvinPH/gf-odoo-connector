@@ -381,19 +381,15 @@ class Field_Mapper {
 				$fallback = trim( $raw_value );
 
 				if ( '' !== $fallback ) {
-					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-					error_log(
-						sprintf(
-							'[GF Odoo Connector] Ticket category "%s" not in static map; trying Odoo name lookup. Entry ID: %s',
-							$fallback,
-							$this->entry['id'] ?? 'unknown'
-						)
-					);
-
 					return $fallback;
 				}
 
 				return null;
+
+			case 'customer_company':
+			case 'serial_lot':
+				// Resolved in Helpdesk_Handler at create time (needs Odoo API).
+				return trim( $raw_value );
 
 			default:
 				return $raw_value;
@@ -721,6 +717,10 @@ class Field_Mapper {
 				continue;
 			}
 
+			if ( ! empty( $row['table_only'] ) ) {
+				continue;
+			}
+
 			$value = $this->normalize_mapped_value_for_odoo( $row, $value, $mode );
 			if ( null === $value || ( '' === $value && ! is_bool( $value ) ) ) {
 				continue;
@@ -735,12 +735,18 @@ class Field_Mapper {
 				continue;
 			}
 
+			$odoo_field = (string) ( $row['odoo_field'] ?? '' );
+
+			if ( '' === $odoo_field ) {
+				continue;
+			}
+
 			if ( 'contact' === $row['section'] ) {
-				$contact[ $row['odoo_field'] ] = is_scalar( $value ) ? (string) $value : '';
+				$contact[ $odoo_field ] = is_scalar( $value ) ? (string) $value : '';
 			} elseif ( 'product' === $row['section'] ) {
-				$product[ $row['odoo_field'] ] = $value;
+				$product[ $odoo_field ] = $value;
 			} else {
-				$ticket[ $row['odoo_field'] ] = $value;
+				$ticket[ $odoo_field ] = $value;
 			}
 		}
 
@@ -761,6 +767,79 @@ class Field_Mapper {
 			'ticket'  => $ticket,
 			'product' => $product,
 		);
+	}
+
+	/**
+	 * Human-readable rows for the Issue Description HTML overview table.
+	 *
+	 * @return array<int, array{label: string, value: string}>
+	 */
+	public function get_helpdesk_table_rows(): array {
+		$addon = GF_Odoo_Addon::get_instance();
+		$rows  = $addon->helpdesk_field_rows();
+		$out   = array();
+
+		foreach ( $rows as $row ) {
+			if ( empty( $row['in_table'] ) || 'ticket_subject' === (string) ( $row['key'] ?? '' ) ) {
+				continue;
+			}
+
+			$key  = (string) $row['key'];
+			$mode = (string) rgar( $this->feed_meta, $key . '_mode', 'off' );
+
+			if ( 'off' === $mode ) {
+				continue;
+			}
+
+			$value = $this->get_helpdesk_table_display_value( $row, $mode );
+
+			if ( '' === $value ) {
+				continue;
+			}
+
+			$out[] = array(
+				'label' => (string) $row['label'],
+				'value' => $value,
+			);
+		}
+
+		return $out;
+	}
+
+	/**
+	 * @param array  $row  Field row.
+	 * @param string $mode Mapping mode.
+	 *
+	 * @return string
+	 */
+	private function get_helpdesk_table_display_value( array $row, string $mode ): string {
+		if ( 'boolean' === ( $row['fixed_type'] ?? '' ) ) {
+			$raw = $this->resolve_helpdesk_field_value( $row, $mode );
+
+			if ( null === $raw ) {
+				return '';
+			}
+
+			return ! empty( $raw )
+				? esc_html__( 'Yes', 'gf-odoo-connector' )
+				: esc_html__( 'No', 'gf-odoo-connector' );
+		}
+
+		if ( 'field' === $mode ) {
+			$raw = trim( $this->get_raw_field_value( (string) $row['key'] ) );
+
+			return $raw;
+		}
+
+		$value = $this->resolve_helpdesk_field_value( $row, $mode );
+
+		if ( null === $value || ( ! is_scalar( $value ) && ! is_bool( $value ) ) ) {
+			return '';
+		}
+
+		return is_bool( $value )
+			? ( $value ? esc_html__( 'Yes', 'gf-odoo-connector' ) : esc_html__( 'No', 'gf-odoo-connector' ) )
+			: trim( (string) $value );
 	}
 
 	/**

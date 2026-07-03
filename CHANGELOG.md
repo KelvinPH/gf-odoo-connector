@@ -2,6 +2,20 @@
 
 All notable changes to GF Odoo Connector are documented here.
 
+## [1.4.0] - 2026-07-03
+
+### Added
+
+- Helpdesk feed configurator aligned with InBody Europe `helpdesk.ticket` fields: ticket category, company (`customer_id`), email, phone, state, country, serial number, DI number, manufacturing date, product model tags, and more.
+- HTML overview table for the Issue Description tab (subject plus all mapped fields in a clean table layout).
+- Auto-detection of the Issue Description Odoo field by label (no developer tooltip required); standard `description` is treated as Resolution on customised instances.
+- Static maps for product model → `helpdesk.tag` (`tag_24`…`tag_46`) and ticket category → `ticket.category` (`category_12`…`category_16`), with API fallbacks.
+- Helpdesk teams loaded from Odoo with a refresh button on the ticket fields section.
+
+### Changed
+
+- Smart routing ticket body field defaults to Auto (Issue Description) instead of `description`.
+
 ## [1.3.0] - 2026-06-30
 
 ### Added

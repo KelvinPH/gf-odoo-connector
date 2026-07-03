@@ -4,7 +4,7 @@ Tags: gravity forms, odoo, crm, helpdesk, integration
 Requires at least: 6.4
 Tested up to: 6.6
 Requires PHP: 8.0
-Stable tag: 1.3.0
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -77,6 +77,14 @@ Templates allow you to configure a feed once and apply it to multiple forms.
 4. Create a webhook for helpdesk.ticket or crm.lead with your URL and secret
 
 == Changelog ==
+
+= 1.4.0 =
+* Helpdesk feed configurator for InBody Europe ticket fields (category, company, location, serial, DI number, product tags, and more)
+* HTML overview table written to Issue Description (subject plus all mapped fields)
+* Auto-detects the Issue Description Odoo field by label; avoids writing to Resolution (`description`) on customised forms
+* Product model and ticket category static maps with Odoo API fallbacks
+* Helpdesk teams loaded from Odoo with refresh on the feed settings page
+* Smart routing ticket body field defaults to Auto instead of `description`
 
 = 1.3.0 =
 * Added Smart lead routing (Beta): classify generic contact submissions and route them to CRM (sales), Helpdesk (support), or skip vendor/spam, with a needs-review fallback
