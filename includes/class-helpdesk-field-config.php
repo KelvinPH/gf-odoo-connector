@@ -34,7 +34,7 @@ class Helpdesk_Field_Config {
 				'required'   => true,
 				'auto_label' => __( 'Form title', 'gf-odoo-connector' ),
 				'fixed_type' => 'text',
-				'in_table'   => false,
+				'in_table'   => true,
 			),
 			array(
 				'key'        => 'ticket_description',
@@ -69,7 +69,7 @@ class Helpdesk_Field_Config {
 				'fixed_type'  => 'odoo_select',
 				'ajax_action' => 'gf_odoo_get_helpdesk_teams',
 				'odoo_model'  => 'helpdesk.team',
-				'in_table'    => true,
+				'in_table'    => false,
 			),
 			array(
 				'key'         => 'ticket_branch',

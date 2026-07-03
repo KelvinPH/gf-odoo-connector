@@ -372,10 +372,10 @@ class Field_Mapper {
 					return '' !== $fallback ? $fallback : null;
 				}
 
-				$ref = GF_Odoo_Ticket_Category_Map::resolve( $raw_value );
+				$hex_ref = GF_Odoo_Ticket_Category_Map::resolve( $raw_value );
 
-				if ( null !== $ref ) {
-					return $ref;
+				if ( null !== $hex_ref ) {
+					return $hex_ref;
 				}
 
 				$fallback = trim( $raw_value );
@@ -434,6 +434,62 @@ class Field_Mapper {
 		}
 
 		return empty( $data['country_id'] );
+	}
+
+	/**
+	 * Whether ticket category was submitted but not resolved to an Odoo ID yet.
+	 *
+	 * @param array<string, mixed> $ticket Mapped ticket payload.
+	 *
+	 * @return bool
+	 */
+	public function has_unresolved_ticket_category_mapping( array $ticket ): bool {
+		$mode = (string) rgar( $this->feed_meta, 'ticket_category_mode', 'off' );
+
+		if ( 'off' === $mode ) {
+			return false;
+		}
+
+		$raw = trim( $this->get_raw_field_value( 'ticket_category' ) );
+
+		if ( '' === $raw ) {
+			return false;
+		}
+
+		if ( ! array_key_exists( 'ticket_category_id', $ticket ) ) {
+			return true;
+		}
+
+		$mapped = $ticket['ticket_category_id'];
+
+		if ( null === $mapped || '' === $mapped ) {
+			return true;
+		}
+
+		if ( is_numeric( $mapped ) && (int) $mapped > 0 ) {
+			return false;
+		}
+
+		// Hex refs and mapped labels are resolved to an Odoo ID in create_ticket — not an error.
+		if ( is_string( $mapped ) && class_exists( 'GF_Odoo_Ticket_Category_Map' ) ) {
+			if ( GF_Odoo_Ticket_Category_Map::is_known_hex_ref( $mapped ) ) {
+				return false;
+			}
+
+			if ( null !== GF_Odoo_Ticket_Category_Map::resolve( $mapped ) ) {
+				return false;
+			}
+		}
+
+		if ( is_string( $mapped ) && (
+			preg_match( '/^category_/i', $mapped )
+			|| preg_match( '/^ticket_category_\d+_/i', $mapped )
+			|| preg_match( '/^[a-f0-9]{6,8}$/i', $mapped )
+		) ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -627,7 +683,9 @@ class Field_Mapper {
 		}
 
 		if ( 'ticket_category' === (string) rgar( $row, 'resolver', '' ) && class_exists( 'GF_Odoo_Ticket_Category_Map' ) ) {
-			return GF_Odoo_Ticket_Category_Map::resolve( $raw );
+			$hex_ref = GF_Odoo_Ticket_Category_Map::resolve( is_scalar( $value ) ? (string) $value : '' );
+
+			return null !== $hex_ref ? $hex_ref : null;
 		}
 
 		$model = (string) rgar( $row, 'odoo_model', '' );
@@ -772,15 +830,19 @@ class Field_Mapper {
 	/**
 	 * Human-readable rows for the Issue Description HTML overview table.
 	 *
+	 * Includes every mapped feed field (mode not "off"), even when the visitor left it empty.
+	 *
+	 * @param array<string, mixed> $ticket Resolved ticket payload (for subject fallback).
+	 *
 	 * @return array<int, array{label: string, value: string}>
 	 */
-	public function get_helpdesk_table_rows(): array {
+	public function get_helpdesk_table_rows( array $ticket = array() ): array {
 		$addon = GF_Odoo_Addon::get_instance();
 		$rows  = $addon->helpdesk_field_rows();
 		$out   = array();
 
 		foreach ( $rows as $row ) {
-			if ( empty( $row['in_table'] ) || 'ticket_subject' === (string) ( $row['key'] ?? '' ) ) {
+			if ( empty( $row['in_table'] ) ) {
 				continue;
 			}
 
@@ -791,15 +853,9 @@ class Field_Mapper {
 				continue;
 			}
 
-			$value = $this->get_helpdesk_table_display_value( $row, $mode );
-
-			if ( '' === $value ) {
-				continue;
-			}
-
 			$out[] = array(
-				'label' => (string) $row['label'],
-				'value' => $value,
+				'label' => $this->get_helpdesk_table_row_label( $row, $mode ),
+				'value' => $this->get_helpdesk_table_display_value( $row, $mode, $ticket ),
 			);
 		}
 
@@ -812,7 +868,54 @@ class Field_Mapper {
 	 *
 	 * @return string
 	 */
-	private function get_helpdesk_table_display_value( array $row, string $mode ): string {
+	private function get_helpdesk_table_row_label( array $row, string $mode ): string {
+		if ( 'field' === $mode ) {
+			$gf_label = $this->get_mapped_gf_field_label( (string) $row['key'] );
+
+			if ( '' !== $gf_label ) {
+				return $gf_label;
+			}
+		}
+
+		return (string) $row['label'];
+	}
+
+	/**
+	 * @param string $key Field row key.
+	 *
+	 * @return string
+	 */
+	private function get_mapped_gf_field_label( string $key ): string {
+		$stored   = rgar( $this->feed_meta, $key . '_value' );
+		$field_id = is_array( $stored )
+			? (string) ( $stored['field_id'] ?? '' )
+			: trim( (string) $stored );
+
+		if ( '' === $field_id || empty( $this->form['fields'] ) || ! is_array( $this->form['fields'] ) ) {
+			return '';
+		}
+
+		foreach ( $this->form['fields'] as $field ) {
+			if ( ! is_object( $field ) ) {
+				continue;
+			}
+
+			if ( (string) (int) ( $field->id ?? 0 ) === $field_id ) {
+				return trim( (string) ( $field->label ?? '' ) );
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * @param array                $row    Field row.
+	 * @param string               $mode   Mapping mode.
+	 * @param array<string, mixed> $ticket Resolved ticket payload.
+	 *
+	 * @return string
+	 */
+	private function get_helpdesk_table_display_value( array $row, string $mode, array $ticket = array() ): string {
 		if ( 'boolean' === ( $row['fixed_type'] ?? '' ) ) {
 			$raw = $this->resolve_helpdesk_field_value( $row, $mode );
 
@@ -825,10 +928,18 @@ class Field_Mapper {
 				: esc_html__( 'No', 'gf-odoo-connector' );
 		}
 
-		if ( 'field' === $mode ) {
-			$raw = trim( $this->get_raw_field_value( (string) $row['key'] ) );
+		if ( 'auto' === $mode && 'ticket_subject' === (string) ( $row['key'] ?? '' ) ) {
+			$subject = trim( (string) ( $ticket['name'] ?? '' ) );
 
-			return $raw;
+			if ( '' !== $subject ) {
+				return $subject;
+			}
+
+			return trim( (string) rgar( $this->form, 'title' ) );
+		}
+
+		if ( 'field' === $mode ) {
+			return trim( $this->get_raw_field_value( (string) $row['key'] ) );
 		}
 
 		$value = $this->resolve_helpdesk_field_value( $row, $mode );
@@ -837,9 +948,90 @@ class Field_Mapper {
 			return '';
 		}
 
-		return is_bool( $value )
+		$display = is_bool( $value )
 			? ( $value ? esc_html__( 'Yes', 'gf-odoo-connector' ) : esc_html__( 'No', 'gf-odoo-connector' ) )
 			: trim( (string) $value );
+
+		return $this->resolve_helpdesk_table_choice_label( $row, $display );
+	}
+
+	/**
+	 * Turn Odoo IDs / internal slugs into human labels for the overview table.
+	 *
+	 * @param array  $row   Field row.
+	 * @param string $value Raw display value.
+	 *
+	 * @return string
+	 */
+	private function resolve_helpdesk_table_choice_label( array $row, string $value ): string {
+		if ( '' === $value ) {
+			return '';
+		}
+
+		foreach ( (array) rgar( $row, 'fixed_choices', array() ) as $choice ) {
+			$choice_value = (string) rgar( $choice, 'value', '' );
+			$choice_label = (string) rgar( $choice, 'label', '' );
+
+			if ( (string) $value === $choice_value || strcasecmp( $value, $choice_label ) === 0 ) {
+				return $choice_label;
+			}
+
+			if ( 'ticket_category' === (string) ( $row['key'] ?? '' )
+				&& class_exists( 'GF_Odoo_Ticket_Category_Map' ) ) {
+				$label = GF_Odoo_Ticket_Category_Map::label_for_slug( $value );
+
+				if ( null !== $label ) {
+					return $label;
+				}
+			}
+		}
+
+		if ( 'odoo_select' === ( $row['fixed_type'] ?? '' ) && is_numeric( $value ) ) {
+			$label = $this->lookup_odoo_select_label( (string) $row['key'], (int) $value );
+
+			if ( '' !== $label ) {
+				return $label;
+			}
+		}
+
+		return $value;
+	}
+
+	/**
+	 * @param string $row_key Field row key.
+	 * @param int    $id      Odoo record ID.
+	 *
+	 * @return string
+	 */
+	private function lookup_odoo_select_label( string $row_key, int $id ): string {
+		if ( $id <= 0 ) {
+			return '';
+		}
+
+		$transient = array(
+			'ticket_team'    => 'gf_odoo_helpdesk_teams',
+			'ticket_branch'  => 'gf_odoo_options_branches',
+			'ticket_state'   => 'gf_odoo_options_states',
+			'ticket_country' => 'gf_odoo_options_countries',
+		);
+
+		if ( ! isset( $transient[ $row_key ] ) ) {
+			return '';
+		}
+
+		$cached = get_transient( $transient[ $row_key ] );
+
+		if ( ! is_array( $cached ) ) {
+			return '';
+		}
+
+		foreach ( $cached as $choice ) {
+			if ( (int) rgar( $choice, 'value', 0 ) === $id ) {
+				return (string) rgar( $choice, 'label', '' );
+			}
+		}
+
+		return '';
 	}
 
 	/**

@@ -180,8 +180,8 @@ class GF_Odoo_Admin_Menu {
 
 		add_submenu_page(
 			self::PARENT_SLUG,
-			__( 'Smart routing (Beta)', 'gf-odoo-connector' ),
-			__( 'Smart routing (Beta)', 'gf-odoo-connector' ),
+			__( 'Smart routing', 'gf-odoo-connector' ),
+			__( 'Smart routing', 'gf-odoo-connector' ),
 			$cap,
 			'gf_odoo_smart_routing',
 			array( $addon, 'render_smart_routing_page' )

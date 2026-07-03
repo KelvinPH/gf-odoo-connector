@@ -1,6 +1,6 @@
 <?php
 /**
- * Keyword-based lead classifier for Smart lead routing (Beta).
+ * Keyword-based lead classifier for Smart lead routing.
  *
  * Scores form submission text against admin-managed keyword lists to decide
  * whether a generic contact message is vendor/spam, a sales lead, support, or

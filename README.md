@@ -16,7 +16,7 @@ Connect [Gravity Forms](https://www.gravityforms.com/) to [Odoo](https://www.odo
 - **Per-field mapping**: map each Odoo field from a form field, a fixed value, auto-fill, or turn it off.
 - **Feed templates**: configure mappings once and apply them to many forms, with per-form overrides and smart label-based remapping.
 - **Global CRM assignment**: set a default salesperson and sales team for *all* forms, with an optional "force on all forms" mode that ignores per-form overrides.
-- **Smart lead routing (Beta)**: classify generic contact submissions and route them to CRM (sales), Helpdesk (support), or skip vendor/spam, with a needs-review fallback. Hybrid engine: instant offline keywords plus an optional EU-friendly AI (Mistral, or a custom OpenAI-compatible endpoint) that only handles uncertain cases and runs in the background. Off by default; enable per feed and start in Log only mode.
+- **Smart lead routing**: classify generic contact submissions and route them to CRM (sales), Helpdesk (support), or skip vendor/spam, with a needs-review fallback. Hybrid engine: instant offline keywords plus an optional EU-friendly AI (Mistral, or a custom OpenAI-compatible endpoint) that only handles uncertain cases and runs in the background. Off by default; enable per feed and start in Log only mode.
 - **Static lookups**: 251 countries and 9 industries resolved locally with zero extra API calls.
 - **Source capture**: auto-fills the submission page URL into `utm.source`.
 - **Asynchronous processing**: submissions return instantly; syncing runs in the background via Action Scheduler.
@@ -135,7 +135,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the full history. Latest:
 - Helpdesk feed configurator for InBody Europe ticket fields, HTML overview table in Issue Description, auto-detect issue field by Odoo label, product/category tag maps, and helpdesk teams from Odoo.
 
 ### 1.3.0
-- Added Smart lead routing (Beta): a hybrid keyword + optional EU AI classifier that routes generic contact submissions to CRM (sales), Helpdesk (support), or skips vendor/spam, with a needs-review fallback. Off by default; enable per feed and run in Log only mode first.
+- Added Smart lead routing: a hybrid keyword + optional EU AI classifier that routes generic contact submissions to CRM (sales), Helpdesk (support), or skips vendor/spam, with a needs-review fallback. Off by default; enable per feed and run in Log only mode first.
 
 ### 1.2.1
 - Reworked the admin submenu into a clean flat layout with group dividers; removed em dashes across the plugin.

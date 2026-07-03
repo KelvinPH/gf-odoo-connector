@@ -101,8 +101,12 @@ class Helpdesk_Handler {
 				$score = 90;
 			} elseif ( str_contains( $label, 'issue desc' ) ) {
 				$score = 80;
+			} elseif ( preg_match( '/\bissue\b/', $label ) && ! str_contains( $label, 'resolution' ) ) {
+				$score = 45;
 			} elseif ( str_contains( $name_l, 'issue' ) && str_contains( $name_l, 'desc' ) ) {
 				$score = 70;
+			} elseif ( str_starts_with( $name_l, 'x_' ) && str_contains( $name_l, 'issue' ) ) {
+				$score = 65;
 			} elseif ( str_contains( $name_l, 'issue' ) && 'html' === $type ) {
 				$score = 50;
 			}
@@ -132,6 +136,31 @@ class Helpdesk_Handler {
 
 		$resolved = isset( $candidates[0]['name'] ) ? (string) $candidates[0]['name'] : '';
 
+		if ( '' === $resolved ) {
+			$html_fallbacks = array();
+
+			foreach ( $fields as $name => $meta ) {
+				$meta   = (array) $meta;
+				$type   = (string) rgar( $meta, 'type' );
+				$name_l = strtolower( (string) $name );
+				$label  = strtolower( trim( (string) rgar( $meta, 'string', '' ) ) );
+
+				if ( 'html' !== $type || 'description' === $name_l ) {
+					continue;
+				}
+
+				if ( str_contains( $label, 'resolution' ) ) {
+					continue;
+				}
+
+				$html_fallbacks[] = (string) $name;
+			}
+
+			if ( 1 === count( $html_fallbacks ) ) {
+				$resolved = $html_fallbacks[0];
+			}
+		}
+
 		if ( '' !== $resolved ) {
 			set_transient( 'gf_odoo_issue_desc_field', $resolved, DAY_IN_SECONDS );
 		}
@@ -152,6 +181,37 @@ class Helpdesk_Handler {
 		}
 
 		return $names;
+	}
+
+	/**
+	 * Allow mapped text/html and custom fields through create() field filtering.
+	 *
+	 * @param array<string, mixed> $data    Payload.
+	 * @param array<int, string>   $allowed Base allow list.
+	 *
+	 * @return array<int, string>
+	 */
+	private function expand_allowed_with_payload_fields( array $data, array $allowed ): array {
+		$meta_fields = $this->get_ticket_fields_metadata();
+
+		foreach ( array_keys( $data ) as $field_key ) {
+			if ( ! is_string( $field_key ) ) {
+				continue;
+			}
+
+			if ( 0 === strpos( $field_key, 'x_' ) ) {
+				$allowed[] = $field_key;
+				continue;
+			}
+
+			$type = (string) rgar( (array) ( $meta_fields[ $field_key ] ?? array() ), 'type' );
+
+			if ( in_array( $type, array( 'html', 'text' ), true ) ) {
+				$allowed[] = $field_key;
+			}
+		}
+
+		return array_values( array_unique( $allowed ) );
 	}
 
 	/**
@@ -336,14 +396,7 @@ class Helpdesk_Handler {
 	 */
 	public function create_ticket( array $data ): int {
 		$allowed = Helpdesk_Field_Config::ticket_field_names();
-
-		// Allow Odoo custom fields (always x_ prefixed) so smart routing can
-		// target instance-specific fields such as a custom "Issue Description".
-		foreach ( array_keys( $data ) as $field_key ) {
-			if ( is_string( $field_key ) && 0 === strpos( $field_key, 'x_' ) ) {
-				$allowed[] = $field_key;
-			}
-		}
+		$allowed = $this->expand_allowed_with_payload_fields( $data, $allowed );
 
 		$data = $this->filter_fields( $data, $allowed );
 
@@ -392,6 +445,18 @@ class Helpdesk_Handler {
 			}
 		}
 
+		foreach ( array_keys( $data ) as $field_key ) {
+			if ( ! is_string( $field_key ) || ! is_string( $data[ $field_key ] ?? null ) ) {
+				continue;
+			}
+
+			$type = (string) rgar( (array) ( $this->get_ticket_fields_metadata()[ $field_key ] ?? array() ), 'type' );
+
+			if ( 'text' === $type && str_contains( $data[ $field_key ], '<' ) ) {
+				$data[ $field_key ] = $this->format_html_description( $data[ $field_key ] );
+			}
+		}
+
 		if ( array_key_exists( 'under_warranty', $data ) ) {
 			$data['under_warranty'] = (bool) $data['under_warranty'];
 		}
@@ -407,19 +472,19 @@ class Helpdesk_Handler {
 		}
 
 		foreach ( array( 'ticket_category_id', 'category_id' ) as $category_field ) {
-			if ( empty( $data[ $category_field ] ) || is_numeric( $data[ $category_field ] ) ) {
+			if ( ! array_key_exists( $category_field, $data ) || '' === $data[ $category_field ] || null === $data[ $category_field ] ) {
 				continue;
 			}
 
-			$category_id = $this->resolve_ticket_category_id( (string) $data[ $category_field ] );
+			$raw = $data[ $category_field ];
+			unset( $data[ $category_field ] );
+
+			$category_id = $this->normalize_ticket_category_id( $raw );
 
 			if ( $category_id > 0 ) {
 				$data['ticket_category_id'] = $category_id;
-			} else {
-				unset( $data['ticket_category_id'] );
 			}
 
-			unset( $data[ $category_field ] );
 			break;
 		}
 
@@ -723,6 +788,41 @@ class Helpdesk_Handler {
 			return (int) $cached;
 		}
 
+		if ( class_exists( 'GF_Odoo_Ticket_Category_Map' ) ) {
+			$hex_ref = GF_Odoo_Ticket_Category_Map::resolve( $input );
+
+			if ( null !== $hex_ref ) {
+				$category_id = $this->resolve_ticket_category_hex_ref( $hex_ref );
+
+				if ( $category_id > 0 ) {
+					set_transient( $cache_key, $category_id, HOUR_IN_SECONDS );
+
+					return $category_id;
+				}
+			}
+		}
+
+		if ( preg_match( '/^[a-f0-9]{6,8}$/i', $input ) ) {
+			$category_id = $this->resolve_ticket_category_hex_ref( $input );
+
+			if ( $category_id > 0 ) {
+				set_transient( $cache_key, $category_id, HOUR_IN_SECONDS );
+
+				return $category_id;
+			}
+		}
+
+		// Labels like "Web/app" via live Odoo name search.
+		if ( ! preg_match( '/^category_\d+$/i', $input ) && ! is_numeric( $input ) ) {
+			$category_id = $this->find_ticket_category_by_name( $input );
+
+			if ( $category_id > 0 ) {
+				set_transient( $cache_key, $category_id, HOUR_IN_SECONDS );
+
+				return $category_id;
+			}
+		}
+
 		$candidates = array( $input );
 
 		if ( class_exists( 'GF_Odoo_Ticket_Category_Map' ) ) {
@@ -753,6 +853,146 @@ class Helpdesk_Handler {
 	}
 
 	/**
+	 * @param string $xml_name ir.model.data name (e.g. ticket_category_12_f43eb468).
+	 *
+	 * @return int ticket.category res_id.
+	 */
+	private function resolve_ticket_category_xml_name( string $xml_name ): int {
+		$xml_name = strtolower( trim( $xml_name ) );
+
+		if ( '' === $xml_name ) {
+			return 0;
+		}
+
+		$cache_key = 'gf_odoo_ticket_cat_xml_' . md5( $xml_name );
+		$cached    = get_transient( $cache_key );
+
+		if ( false !== $cached && (int) $cached > 0 ) {
+			return (int) $cached;
+		}
+
+		$res_id = $this->find_ticket_category_xml_res_id( $xml_name, false, '__export__' );
+
+		if ( $res_id <= 0 ) {
+			$res_id = $this->find_ticket_category_xml_res_id( $xml_name, false );
+		}
+
+		if ( $res_id > 0 ) {
+			set_transient( $cache_key, $res_id, HOUR_IN_SECONDS );
+		}
+
+		return $res_id;
+	}
+
+	/**
+	 * @param mixed $raw Mapped category value (slug, label, or numeric id).
+	 *
+	 * @return int
+	 */
+	private function normalize_ticket_category_id( $raw ): int {
+		if ( is_int( $raw ) || ( is_string( $raw ) && is_numeric( $raw ) ) ) {
+			$number = (int) $raw;
+
+			return ( $number > 0 && $this->ticket_category_record_exists( $number ) ) ? $number : 0;
+		}
+
+		return $this->resolve_ticket_category_id( (string) $raw );
+	}
+
+	/**
+	 * Resolve an Odoo export hex ref to a ticket.category res_id.
+	 *
+	 * @param string $hex_ref Hex from export (e.g. 3eb468).
+	 *
+	 * @return int
+	 */
+	private function resolve_ticket_category_hex_ref( string $hex_ref ): int {
+		$hex_ref = strtolower( trim( $hex_ref ) );
+
+		if ( '' === $hex_ref ) {
+			return 0;
+		}
+
+		$cache_key = 'gf_odoo_ticket_cat_hex_' . md5( $hex_ref );
+		$cached    = get_transient( $cache_key );
+
+		if ( false !== $cached && (int) $cached > 0 ) {
+			return (int) $cached;
+		}
+
+		$patterns = class_exists( 'GF_Odoo_Ticket_Category_Map' )
+			? GF_Odoo_Ticket_Category_Map::xml_lookup_patterns( $hex_ref )
+			: array( '%' . $hex_ref );
+
+		foreach ( $patterns as $pattern ) {
+			$res_id = $this->find_ticket_category_xml_res_id( $pattern, true, '__export__' );
+
+			if ( $res_id <= 0 ) {
+				$res_id = $this->find_ticket_category_xml_res_id( $pattern, true );
+			}
+
+			if ( $res_id > 0 ) {
+				set_transient( $cache_key, $res_id, HOUR_IN_SECONDS );
+
+				return $res_id;
+			}
+		}
+
+		if ( class_exists( 'GF_Odoo_Ticket_Category_Map' ) ) {
+			$label = GF_Odoo_Ticket_Category_Map::label_for_slug( $hex_ref );
+
+			if ( null !== $label ) {
+				$by_name = $this->find_ticket_category_by_name( $label );
+
+				if ( $by_name > 0 ) {
+					set_transient( $cache_key, $by_name, HOUR_IN_SECONDS );
+
+					return $by_name;
+				}
+			}
+		}
+
+		return 0;
+	}
+
+	/**
+	 * @param int $record_id Candidate ticket.category ID.
+	 *
+	 * @return bool
+	 */
+	private function ticket_category_record_exists( int $record_id ): bool {
+		if ( $record_id <= 0 ) {
+			return false;
+		}
+
+		foreach ( $this->ticket_category_models() as $model ) {
+			try {
+				$records = $this->api->call(
+					$model,
+					'search_read',
+					array(
+						array(
+							array( 'id', '=', $record_id ),
+						),
+					),
+					array(
+						'fields' => array( 'id' ),
+						'limit'  => 1,
+					)
+				);
+
+				if ( ! empty( $records[0]['id'] ) ) {
+					return true;
+				}
+			} catch ( Exception $e ) {
+				continue;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * @param string $candidate Category slug or numeric string.
 	 *
 	 * @return int
@@ -762,6 +1002,14 @@ class Helpdesk_Handler {
 
 		if ( '' === $candidate ) {
 			return 0;
+		}
+
+		if ( preg_match( '/^[a-f0-9]{6,8}$/i', $candidate ) ) {
+			return $this->resolve_ticket_category_hex_ref( $candidate );
+		}
+
+		if ( preg_match( '/^ticket_category_\d+_[a-f0-9]+$/i', $candidate ) ) {
+			return $this->resolve_ticket_category_xml_name( $candidate );
 		}
 
 		if ( preg_match( '/^category_(\d+)$/i', $candidate, $matches ) ) {
@@ -793,37 +1041,58 @@ class Helpdesk_Handler {
 			return (int) $cached;
 		}
 
+		$xml_patterns = array(
+			'ticket_category_' . $number . '%',
+			'category_' . $number . '%',
+		);
+
 		$xml_names = array(
 			'ticket_category_' . $number,
 			'category_' . $number,
 		);
 
+		foreach ( $xml_patterns as $pattern ) {
+			$res_id = $this->find_ticket_category_xml_res_id( $pattern, true );
+
+			if ( $res_id > 0 ) {
+				set_transient( $cache_key, $res_id, HOUR_IN_SECONDS );
+
+				return $res_id;
+			}
+		}
+
 		foreach ( $xml_names as $xml_name ) {
-			foreach ( $this->ticket_category_models() as $model ) {
-				try {
-					$rows = $this->api->call(
-						'ir.model.data',
-						'search_read',
-						array(
-							array(
-								array( 'name', '=', $xml_name ),
-								array( 'model', '=', $model ),
-							),
-						),
-						array(
-							'fields' => array( 'res_id' ),
-							'limit'  => 1,
-						)
-					);
+			$res_id = $this->find_ticket_category_xml_res_id( $xml_name, false );
 
-					if ( ! empty( $rows[0]['res_id'] ) ) {
-						$id = (int) $rows[0]['res_id'];
-						set_transient( $cache_key, $id, HOUR_IN_SECONDS );
+			if ( $res_id > 0 ) {
+				set_transient( $cache_key, $res_id, HOUR_IN_SECONDS );
 
-						return $id;
-					}
-				} catch ( Exception $e ) {
-					continue;
+				return $res_id;
+			}
+		}
+
+		if ( class_exists( 'GF_Odoo_Ticket_Category_Map' ) ) {
+			$hex_ref = GF_Odoo_Ticket_Category_Map::resolve( $slug_key );
+
+			if ( null !== $hex_ref ) {
+				$by_hex = $this->resolve_ticket_category_hex_ref( $hex_ref );
+
+				if ( $by_hex > 0 ) {
+					set_transient( $cache_key, $by_hex, HOUR_IN_SECONDS );
+
+					return $by_hex;
+				}
+			}
+
+			$label = GF_Odoo_Ticket_Category_Map::label_for_slug( $slug_key );
+
+			if ( null !== $label ) {
+				$by_name = $this->find_ticket_category_by_name( $label );
+
+				if ( $by_name > 0 ) {
+					set_transient( $cache_key, $by_name, HOUR_IN_SECONDS );
+
+					return $by_name;
 				}
 			}
 		}
@@ -870,28 +1139,102 @@ class Helpdesk_Handler {
 			return 0;
 		}
 
+		$searches = array(
+			array( 'name', '=', $name ),
+			array( 'name', 'ilike', $name ),
+		);
+
+		foreach ( $this->ticket_category_models() as $model ) {
+			foreach ( $searches as $condition ) {
+				try {
+					$records = $this->api->call(
+						$model,
+						'search_read',
+						array(
+							array( $condition ),
+						),
+						array(
+							'fields' => array( 'id', 'name' ),
+							'limit'  => 1,
+						)
+					);
+
+					if ( ! empty( $records[0]['id'] ) ) {
+						return (int) $records[0]['id'];
+					}
+				} catch ( Exception $e ) {
+					continue;
+				}
+			}
+		}
+
+		return 0;
+	}
+
+	/**
+	 * @param string      $name_pattern Exact xml name or =like pattern (with %).
+	 * @param bool        $use_like     When true, use =like operator.
+	 * @param string|null $module       Optional ir.model.data module (e.g. __export__).
+	 *
+	 * @return int res_id from ir.model.data.
+	 */
+	private function find_ticket_category_xml_res_id( string $name_pattern, bool $use_like, ?string $module = null ): int {
+		$operator = $use_like ? '=like' : '=';
+
+		$domain = array(
+			array( 'name', $operator, $name_pattern ),
+		);
+
+		if ( null !== $module && '' !== $module ) {
+			$domain[] = array( 'module', '=', $module );
+		}
+
 		foreach ( $this->ticket_category_models() as $model ) {
 			try {
-				$records = $this->api->call(
-					$model,
+				$search_domain = array_merge( array( $domain ), array( array( 'model', '=', $model ) ) );
+
+				$rows = $this->api->call(
+					'ir.model.data',
 					'search_read',
+					array( $search_domain ),
 					array(
-						array(
-							array( 'name', '=', $name ),
-						),
-					),
-					array(
-						'fields' => array( 'id' ),
+						'fields' => array( 'res_id' ),
 						'limit'  => 1,
 					)
 				);
 
-				if ( ! empty( $records[0]['id'] ) ) {
-					return (int) $records[0]['id'];
+				if ( ! empty( $rows[0]['res_id'] ) ) {
+					return (int) $rows[0]['res_id'];
 				}
 			} catch ( Exception $e ) {
 				continue;
 			}
+		}
+
+		try {
+			$rows = $this->api->call(
+				'ir.model.data',
+				'search_read',
+				array(
+					array( $domain ),
+				),
+				array(
+					'fields' => array( 'res_id', 'model' ),
+					'limit'  => 5,
+				)
+			);
+
+			$allowed = $this->ticket_category_models();
+
+			foreach ( (array) $rows as $row ) {
+				$model = (string) ( $row['model'] ?? '' );
+
+				if ( in_array( $model, $allowed, true ) && ! empty( $row['res_id'] ) ) {
+					return (int) $row['res_id'];
+				}
+			}
+		} catch ( Exception $e ) {
+			return 0;
 		}
 
 		return 0;

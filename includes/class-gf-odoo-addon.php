@@ -1295,7 +1295,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 
 	/**
 	 * AJAX handler: send a sample message to the configured AI provider and
-	 * report whether classification works (Smart routing Beta "Test AI" button).
+	 * report whether classification works (Smart routing "Test AI" button).
 	 */
 	public function ajax_test_ai() {
 		check_ajax_referer( 'gf_odoo_test_ai', 'nonce' );
@@ -2618,7 +2618,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	}
 
 	/**
-	 * Smart routing (Beta) settings, split into focused cards.
+	 * Smart routing settings, split into focused cards.
 	 *
 	 * @return array<int, array>
 	 */
@@ -2626,18 +2626,12 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		$defaults = $this->get_default_plugin_settings();
 
 		$overview_section = array(
-			'title'       => esc_html__( 'Smart routing (Beta)', 'gf-odoo-connector' ),
+			'title'       => esc_html__( 'Smart routing', 'gf-odoo-connector' ),
 			'description' => esc_html__(
 				'Automatically read each contact-form submission and send it to the right place: a CRM lead (sales), a Helpdesk ticket (support), or skip it (vendor/spam).',
 				'gf-odoo-connector'
 			),
 			'fields'      => array(
-				array(
-					'name'  => 'smart_routing_beta_notice',
-					'label' => '',
-					'type'  => 'html',
-					'html'  => $this->get_smart_routing_beta_notice_markup(),
-				),
 				array(
 					'name'  => 'smart_routing_how_it_works',
 					'label' => '',
@@ -2646,7 +2640,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 				),
 				array(
 					'name'    => 'smart_routing_enabled',
-					'label'   => esc_html__( 'Enable Smart Routing (Beta)', 'gf-odoo-connector' ),
+					'label'   => esc_html__( 'Enable Smart Routing', 'gf-odoo-connector' ),
 					'type'    => 'checkbox',
 					'tooltip' => esc_html__( 'Master switch for the whole site. When off, every feed behaves exactly as before. After turning this on, you also tick "Enable smart routing" on each form\'s Odoo feed.', 'gf-odoo-connector' ),
 					'choices' => array(
@@ -2927,22 +2921,6 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	}
 
 	/**
-	 * Beta banner shown at the top of the Smart routing settings page.
-	 *
-	 * @return string
-	 */
-	private function get_smart_routing_beta_notice_markup(): string {
-		return sprintf(
-			'<div class="gf-odoo-beta-notice"><strong>%1$s</strong> %2$s</div>',
-			esc_html__( 'Beta feature.', 'gf-odoo-connector' ),
-			esc_html__(
-				'Smart routing is experimental. Start with Mode = Log only, review the routing decisions in entry notes for a few days, tune the keyword lists, then switch to Enforce. It never deletes entries; vendor/spam is simply not synced to Odoo.',
-				'gf-odoo-connector'
-			)
-		);
-	}
-
-	/**
 	 * GDPR / privacy note for the AI subsection.
 	 *
 	 * @return string
@@ -3060,7 +3038,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 					),
 					array(
 						'name'    => 'smart_routing_enabled',
-						'label'   => esc_html__( 'Smart routing (Beta)', 'gf-odoo-connector' ),
+						'label'   => esc_html__( 'Smart routing', 'gf-odoo-connector' ),
 						'type'    => 'checkbox',
 						'choices' => array(
 							array(
@@ -3069,7 +3047,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 							),
 						),
 						'description' => esc_html__(
-							'For generic contact forms. Inspects the message and routes it to CRM (sales), Helpdesk (support), or skips vendor/spam. Configure keywords and the AI under Forms → Settings → GF Odoo Connector → Smart routing (Beta). Requires the global master switch to be on.',
+							'For generic contact forms. Inspects the message and routes it to CRM (sales), Helpdesk (support), or skips vendor/spam. Configure keywords and the AI under Forms → Settings → GF Odoo Connector → Smart routing. Requires the global master switch to be on.',
 							'gf-odoo-connector'
 						),
 					),
@@ -3196,10 +3174,16 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 							),
 						),
 						array(
-							'name'    => 'helpdesk_description_table',
-							'label'   => esc_html__( 'Issue description layout', 'gf-odoo-connector' ),
-							'type'    => 'checkbox',
-							'choices' => array(
+							'name'          => 'helpdesk_description_table',
+							'label'         => esc_html__( 'Issue description layout', 'gf-odoo-connector' ),
+							'type'          => 'checkbox',
+							'default_value' => array(
+								'helpdesk_description_table' => esc_html__(
+									'Build an HTML overview table in the issue description (includes subject and all mapped fields)',
+									'gf-odoo-connector'
+								),
+							),
+							'choices'       => array(
 								array(
 									'name'  => 'helpdesk_description_table',
 									'label' => esc_html__(
@@ -3584,6 +3568,23 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		}
 
 		return ( new Helpdesk_Handler( $api ) )->resolve_issue_description_field( 'auto' );
+	}
+
+	/**
+	 * Whether the feed should build the HTML overview table in Issue Description.
+	 *
+	 * Defaults to on when the checkbox was never saved (opt-out).
+	 *
+	 * @param array $meta Feed meta.
+	 *
+	 * @return bool
+	 */
+	private function is_helpdesk_description_table_enabled( array $meta ): bool {
+		if ( ! array_key_exists( 'helpdesk_description_table', $meta ) ) {
+			return true;
+		}
+
+		return ! empty( $meta['helpdesk_description_table'] );
 	}
 
 	/**
@@ -5189,7 +5190,6 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			'clear_odoo_cache',
 			'reset_plugin_settings',
 			'crm_assignment_refresh_global',
-			'smart_routing_beta_notice',
 			'smart_routing_ai_heading',
 		);
 		foreach ( $ui_only_keys as $key ) {
@@ -5324,7 +5324,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			return false;
 		}
 
-		// Smart routing (Beta): may skip spam, defer to AI, or reroute the module.
+		// Smart routing: may skip spam, defer to AI, or reroute the module.
 		$smart = null;
 		try {
 			$smart = $this->maybe_smart_route( $feed, $entry, $form );
@@ -7507,6 +7507,30 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		);
 	}
 
+	private function maybe_note_unresolved_ticket_category( Field_Mapper $mapper, array $ticket, array $entry ): void {
+		if ( ! $mapper->has_unresolved_ticket_category_mapping( $ticket ) ) {
+			return;
+		}
+
+		$entry_id = (int) rgar( $entry, 'id' );
+
+		if ( $entry_id <= 0 ) {
+			return;
+		}
+
+		$category_raw = $mapper->get_raw_field_value( 'ticket_category' );
+
+		$this->add_note(
+			$entry_id,
+			sprintf(
+				/* translators: %s: ticket category label from the form submission */
+				__( 'Warning: Ticket category "%s" could not be matched to an Odoo category ID. Check the category map or Odoo category names.', 'gf-odoo-connector' ),
+				$category_raw
+			),
+			'warning'
+		);
+	}
+
 	/**
 	 * @param array $feed  Feed object.
 	 * @param array $entry Entry object.
@@ -7603,6 +7627,8 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			$entry
 		);
 
+		$this->maybe_note_unresolved_ticket_category( $mapper, $ticket, $entry );
+
 		foreach ( $contact as $field => $value ) {
 			if ( '' !== (string) $value ) {
 				$ticket[ $field ] = $value;
@@ -7615,18 +7641,23 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 
 		$issue_field = trim( (string) rgars( $feed, 'meta/helpdesk_issue_desc_field' ) );
 		$issue_field = $this->resolve_helpdesk_issue_field( $issue_field );
-		$table_on    = ! empty( rgars( $feed, 'meta/helpdesk_description_table' ) );
+		$table_on    = $this->is_helpdesk_description_table_enabled( $meta );
 
 		if ( $table_on && '' !== $issue_field && class_exists( 'GF_Odoo_Helpdesk_Description_Builder' ) ) {
 			$table_html = GF_Odoo_Helpdesk_Description_Builder::build(
-				(string) ( $ticket['name'] ?? '' ),
-				$mapper->get_helpdesk_table_rows()
+				$mapper->get_helpdesk_table_rows( $ticket )
 			);
 
 			if ( '' !== $table_html ) {
 				unset( $ticket['description'] );
 				$ticket[ $issue_field ] = $table_html;
 			}
+		} elseif ( $table_on && '' === $issue_field ) {
+			$this->add_note(
+				(int) rgar( $entry, 'id' ),
+				__( 'Odoo sync: could not detect the Issue Description field. Open the feed, pick the field manually, or run Debug: Fetch helpdesk.ticket fields under Connection & API.', 'gf-odoo-connector' ),
+				'warning'
+			);
 		}
 
 		if ( empty( $ticket['name'] ) ) {
@@ -9276,10 +9307,10 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	}
 
 	/**
-	 * Smart routing (Beta) settings page.
+	 * Smart routing settings page.
 	 */
 	public function render_smart_routing_page(): void {
-		$this->render_plugin_settings_subset( 'smart_routing', __( 'Smart routing (Beta)', 'gf-odoo-connector' ) );
+		$this->render_plugin_settings_subset( 'smart_routing', __( 'Smart routing', 'gf-odoo-connector' ) );
 	}
 
 	/**

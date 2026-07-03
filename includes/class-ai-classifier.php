@@ -1,6 +1,6 @@
 <?php
 /**
- * Optional AI classifier for Smart lead routing (Beta).
+ * Optional AI classifier for Smart lead routing.
  *
  * Sends a short, minimised message to an EU-friendly provider (Mistral by
  * default, or a custom OpenAI-compatible endpoint) and asks it to classify the

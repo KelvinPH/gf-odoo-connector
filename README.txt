@@ -85,11 +85,12 @@ Templates allow you to configure a feed once and apply it to multiple forms.
 * Product model and ticket category static maps with Odoo API fallbacks
 * Helpdesk teams loaded from Odoo with refresh on the feed settings page
 * Smart routing ticket body field defaults to Auto instead of `description`
+* Smart lead routing is no longer labelled Beta
 
 = 1.3.0 =
-* Added Smart lead routing (Beta): classify generic contact submissions and route them to CRM (sales), Helpdesk (support), or skip vendor/spam, with a needs-review fallback
+* Added Smart lead routing: classify generic contact submissions and route them to CRM (sales), Helpdesk (support), or skip vendor/spam, with a needs-review fallback
 * Hybrid engine: instant offline keyword scoring plus an optional EU-friendly AI (Mistral by default, or a custom OpenAI-compatible endpoint) that runs in the background and only handles uncertain cases
-* New Smart routing (Beta) settings page with master switch (off by default), Log only / Enforce modes, editable EN/NL/DE/FR keyword lists, spam controls, default Helpdesk team, and tag names; AI key stored encrypted
+* New Smart routing settings page with master switch (off by default), Log only / Enforce modes, editable EN/NL/DE/FR keyword lists, spam controls, default Helpdesk team, and tag names; AI key stored encrypted
 * Entry notes record each routing decision; vendor/spam entries get a new "Skipped (smart routing)" status
 
 = 1.2.1 =

@@ -15,31 +15,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 class GF_Odoo_Helpdesk_Description_Builder {
 
 	/**
-	 * Build the issue description body (HTML table).
+	 * Build the issue description body (HTML table of all mapped fields).
 	 *
-	 * @param string                             $subject Ticket subject (name).
-	 * @param array<int, array{label:string,value:string}> $rows    Label/value pairs.
+	 * @param array<int, array{label:string,value:string}> $rows Label/value pairs.
 	 *
 	 * @return string
 	 */
-	public static function build( string $subject, array $rows ): string {
-		$subject = trim( $subject );
-
+	public static function build( array $rows ): string {
 		$table_rows = array();
-
-		if ( '' !== $subject ) {
-			$table_rows[] = array(
-				'label' => esc_html__( 'Subject', 'gf-odoo-connector' ),
-				'value' => $subject,
-			);
-		}
 
 		foreach ( $rows as $row ) {
 			$label = trim( (string) ( $row['label'] ?? '' ) );
+
+			if ( '' === $label ) {
+				continue;
+			}
+
 			$value = trim( (string) ( $row['value'] ?? '' ) );
 
-			if ( '' === $label || '' === $value ) {
-				continue;
+			if ( '' === $value ) {
+				$value = '—';
 			}
 
 			$table_rows[] = array(
@@ -74,6 +69,10 @@ class GF_Odoo_Helpdesk_Description_Builder {
 	 * @return string Safe HTML.
 	 */
 	private static function format_cell_value( string $value ): string {
+		if ( '—' === $value ) {
+			return esc_html( $value );
+		}
+
 		if ( $value !== wp_strip_all_tags( $value ) ) {
 			return wp_kses_post( $value );
 		}
