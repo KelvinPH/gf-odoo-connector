@@ -671,6 +671,9 @@
 		$hidden.val( JSON.stringify( collectMultiFieldJson( $wrap ) ) );
 	}
 
+	window.gfOdooSyncMultiFieldHidden = syncMultiFieldHidden;
+	window.gfOdooCollectMultiFieldJson = collectMultiFieldJson;
+
 	function syncRowValueInputNames( $row ) {
 		var key = $row.data( 'key' );
 		if ( ! key ) {
@@ -789,6 +792,13 @@
 	}
 
 	function initCrmFieldRows() {
+		var $templateFields = $( '#gf-odoo-template-fields' );
+
+		if ( $templateFields.length ) {
+			initFieldRowsInContainer( $templateFields );
+			return;
+		}
+
 		if ( typeof gfOdooAdmin === 'undefined' || ! isCrmModuleSelected() ) {
 			return;
 		}
@@ -799,6 +809,13 @@
 	}
 
 	function initHelpdeskFieldRows() {
+		var $templateFields = $( '#gf-odoo-template-fields' );
+
+		if ( $templateFields.length && isHelpdeskModuleSelected() ) {
+			initFieldRowsInContainer( $templateFields );
+			return;
+		}
+
 		if ( typeof gfOdooAdmin === 'undefined' || ! isHelpdeskModuleSelected() ) {
 			return;
 		}

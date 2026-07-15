@@ -22,11 +22,25 @@
 	}
 
 	function collectFieldMappingValue( $el ) {
+		if ( $el.hasClass( 'gf-odoo-multi-field-json' ) ) {
+			var raw = $el.val() || '';
+
+			if ( ! raw ) {
+				return '';
+			}
+
+			try {
+				return JSON.parse( raw );
+			} catch ( err ) {
+				return raw;
+			}
+		}
+
 		if ( $el.hasClass( 'gf-odoo-gf-field-select' ) ) {
 			var $opt = $el.find( 'option:selected' );
 			return {
 				field_id: $opt.val() || '',
-				field_label: $opt.data( 'fieldLabel' ) || '',
+				field_label: $opt.data( 'fieldLabel' ) || $opt.data( 'field-label' ) || '',
 			};
 		}
 
@@ -40,8 +54,24 @@
 		return $el.val();
 	}
 
+	function syncAllMultiFieldHiddens( $scope ) {
+		$scope.find( '.gf-odoo-multi-field' ).each( function () {
+			if ( typeof window.gfOdooSyncMultiFieldHidden === 'function' ) {
+				window.gfOdooSyncMultiFieldHidden( $( this ) );
+			}
+		} );
+	}
+
 	function getRowValueInput( $row, mode, key ) {
 		var settingName = '_gform_setting_' + key + '_value';
+
+		if ( mode === 'field' ) {
+			var $multiHidden = $row.find( '.gf-odoo-multi-field-json' ).first();
+			if ( $multiHidden.length ) {
+				return $multiHidden;
+			}
+		}
+
 		var $named = $row
 			.find( '[name="' + settingName + '"]' )
 			.not( '.gf-odoo-readonly-value-hidden' );
@@ -63,6 +93,14 @@
 
 	function collectFeedMetaFromForm( $scope ) {
 		var meta = {};
+
+		if ( typeof window.gfOdooSyncRowValueInputNames === 'function' ) {
+			$scope.find( '.gf-odoo-crm-field-row' ).each( function () {
+				window.gfOdooSyncRowValueInputNames( $( this ) );
+			} );
+		}
+
+		syncAllMultiFieldHiddens( $scope );
 
 		$scope.find( '.gf-odoo-crm-field-row' ).each( function () {
 			var $row = $( this );
@@ -195,6 +233,7 @@
 			$( this ).removeClass( 'gf-odoo-gf-field-select--needs-sample' );
 		} );
 		updateTemplateFieldSelects( fields );
+		syncAllMultiFieldHiddens( $( '#gf-odoo-template-fields' ) );
 		toggleSampleFormNotice( parseInt( $( '#gf-odoo-sample-form' ).val(), 10 ) || 0 );
 	}
 
@@ -241,6 +280,9 @@
 
 	function collectOverrides( $wrap ) {
 		var overrides = {};
+
+		syncAllMultiFieldHiddens( $wrap );
+
 		$wrap.find( '.gf-odoo-crm-field-row.gf-odoo-field--override' ).each( function () {
 			var $row = $( this );
 			var key = $row.data( 'key' );
@@ -736,6 +778,53 @@
 
 	/* --- Sample form selector (template editor) --- */
 
+	$( document ).on(
+		'change',
+		'#gf-odoo-template-fields .gf-odoo-multi-field select.gf-odoo-gf-field-select',
+		function () {
+			var $wrap = $( this ).closest( '.gf-odoo-multi-field' );
+			if ( typeof window.gfOdooSyncMultiFieldHidden === 'function' ) {
+				window.gfOdooSyncMultiFieldHidden( $wrap );
+			}
+		}
+	);
+
+	$( document ).on( 'click', '#gf-odoo-template-fields .gf-odoo-multi-field-add', function ( e ) {
+		e.preventDefault();
+		var $wrap = $( this ).closest( '.gf-odoo-multi-field' );
+		var $list = $wrap.find( '.gf-odoo-multi-field-list' );
+		var $first = $list.find( '.gf-odoo-multi-field-item' ).first();
+
+		if ( ! $first.length ) {
+			return;
+		}
+
+		var $clone = $first.clone();
+		$clone.find( 'select' ).val( '' );
+		$list.append( $clone );
+
+		if ( typeof window.gfOdooSyncMultiFieldHidden === 'function' ) {
+			window.gfOdooSyncMultiFieldHidden( $wrap );
+		}
+	} );
+
+	$( document ).on( 'click', '#gf-odoo-template-fields .gf-odoo-multi-field-remove', function ( e ) {
+		e.preventDefault();
+		var $wrap = $( this ).closest( '.gf-odoo-multi-field' );
+		var $list = $wrap.find( '.gf-odoo-multi-field-list' );
+		var $items = $list.find( '.gf-odoo-multi-field-item' );
+
+		if ( $items.length <= 1 ) {
+			$items.find( 'select' ).val( '' );
+		} else {
+			$( this ).closest( '.gf-odoo-multi-field-item' ).remove();
+		}
+
+		if ( typeof window.gfOdooSyncMultiFieldHidden === 'function' ) {
+			window.gfOdooSyncMultiFieldHidden( $wrap );
+		}
+	} );
+
 	$( document ).on( 'change', '#gf-odoo-sample-form', function () {
 		var formId = parseInt( $( this ).val(), 10 ) || 0;
 		toggleSampleFormNotice( formId );
@@ -807,6 +896,8 @@
 				window.gfOdooSyncRowValueInputNames( $( this ) );
 			} );
 		}
+
+		syncAllMultiFieldHiddens( $form );
 
 		$btn.prop( 'disabled', true );
 

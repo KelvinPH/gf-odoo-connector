@@ -459,6 +459,11 @@ class GF_Odoo_Templates_Admin {
 					select.classList.remove('gf-odoo-gf-field-select--needs-sample');
 					select.innerHTML = buildOptions(fields, current);
 				});
+				if (typeof window.gfOdooSyncMultiFieldHidden === 'function') {
+					root.querySelectorAll('.gf-odoo-multi-field').forEach(function (wrap) {
+						window.gfOdooSyncMultiFieldHidden(jQuery(wrap));
+					});
+				}
 				var notice = document.getElementById('gf-odoo-sample-form-notice');
 				if (notice) {
 					notice.setAttribute('hidden', 'hidden');
