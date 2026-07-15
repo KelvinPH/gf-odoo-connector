@@ -1,0 +1,1539 @@
+/**
+ * GF Odoo Connector: Admin design system
+ *
+ * @package GF_Odoo_Connector
+ */
+
+/* WordPress admin accent (follows user's Admin Color Scheme) */
+
+.gf-odoo-page {
+	--gf-odoo-accent: var(--wp-admin-theme-color, #2271b1);
+	--gf-odoo-accent-hover: var(--wp-admin-theme-color-darker-10, #135e96);
+	--gf-odoo-accent-active: var(--wp-admin-theme-color-darker-20, #0a4b78);
+	--gf-odoo-accent-25: color-mix(in srgb, var(--gf-odoo-accent) 25%, transparent);
+	--gf-odoo-accent-22: color-mix(in srgb, var(--gf-odoo-accent) 22%, transparent);
+	--gf-odoo-accent-12: color-mix(in srgb, var(--gf-odoo-accent) 12%, transparent);
+	--gf-odoo-accent-10: color-mix(in srgb, var(--gf-odoo-accent) 10%, transparent);
+	--gf-odoo-accent-30-white: color-mix(in srgb, var(--gf-odoo-accent) 30%, white);
+	--gf-odoo-accent-8-white: color-mix(in srgb, var(--gf-odoo-accent) 8%, white);
+	max-width: 860px;
+}
+
+.gf-odoo-page.gf-odoo-page--wide {
+	max-width: 1280px;
+}
+
+.gf-odoo-page-title {
+	font-size: 20px;
+	font-weight: 600;
+	color: #1e1e2e;
+	margin: 0 0 20px;
+	padding: 0;
+	line-height: 1.35;
+	border: none;
+}
+
+.gf-odoo-page h1.gf-odoo-page-title {
+	font-size: 20px;
+	border-bottom: none;
+	padding-bottom: 0;
+}
+
+/* Tighter gap between title and subtitle, but never overlapping */
+.gf-odoo-page-title:has(+ .gf-odoo-page-desc),
+.gf-odoo-page-title:has(+ .gf-odoo-page-actions) {
+	margin-bottom: 8px;
+}
+
+.gf-odoo-page-desc {
+	font-size: 13px;
+	color: #666;
+	margin: 0 0 24px;
+	line-height: 1.55;
+	max-width: 42rem;
+}
+
+.gf-odoo-page-title + .gf-odoo-page-desc {
+	margin-top: 0;
+}
+
+.gf-odoo-page-desc + .gf-odoo-card,
+.gf-odoo-page-desc + .gf-odoo-page-actions,
+.gf-odoo-page-desc + .gform-settings-panel {
+	margin-top: 0;
+}
+
+.gf-odoo-page-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0 0 24px;
+	flex-wrap: wrap;
+}
+
+.gf-odoo-page-title + .gf-odoo-page-actions {
+	margin-top: 0;
+}
+
+.gf-odoo-page-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	flex-wrap: wrap;
+	margin: 0 0 24px;
+}
+
+.gf-odoo-page-header .gf-odoo-page-title {
+	margin: 0;
+}
+
+.gf-odoo-card-body--flush {
+	padding: 0;
+}
+
+.gf-odoo-mt-md {
+	margin-top: 12px;
+}
+
+.gf-odoo-mb-0 {
+	margin-bottom: 0;
+}
+
+/* === 2. Cards === */
+
+.gf-odoo-page .notice {
+	margin: 0 0 16px;
+}
+
+.gf-odoo-card {
+	background: #fff;
+	border-radius: 10px;
+	border: 1px solid #e8e8e8;
+	margin-bottom: 16px;
+	overflow: hidden;
+}
+
+.gf-odoo-card-header {
+	padding: 16px 20px;
+	border-bottom: 1px solid #f2f2f2;
+}
+
+.gf-odoo-card-header h3 {
+	font-size: 13.5px;
+	font-weight: 600;
+	color: #1e1e2e;
+	margin: 0;
+	line-height: 1.35;
+}
+
+.gf-odoo-card-header p {
+	font-size: 12px;
+	color: #888;
+	margin: 8px 0 0;
+	line-height: 1.5;
+	max-width: 42rem;
+}
+
+.gf-odoo-card-body {
+	padding: 20px;
+}
+
+.gf-odoo-card-footer {
+	padding: 12px 20px;
+	background: #fafafa;
+	border-top: 1px solid #f2f2f2;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+/* GF settings panels styled as cards on plugin pages */
+.gf-odoo-page .gform-settings-panel {
+	background: #fff;
+	border: 1px solid #e8e8e8;
+	border-radius: 10px;
+	box-shadow: none;
+	margin: 0 0 16px;
+	position: relative;
+	overflow: hidden;
+}
+
+.gf-odoo-page .gform-settings-panel--with-title {
+	padding-top: 2.875rem;
+}
+
+.gf-odoo-page .gform-settings-panel__title--header,
+.gf-odoo-page legend.gform-settings-panel__title {
+	border: 0;
+	box-sizing: border-box;
+	display: block;
+	font-size: 13.5px;
+	font-weight: 600;
+	color: #1e1e2e;
+	left: 0;
+	line-height: 2.875rem;
+	margin: 0;
+	padding: 0 20px;
+	position: absolute;
+	top: 0;
+	width: 100%;
+}
+
+.gf-odoo-page .gform-settings-panel .gform-settings-panel__content {
+	border-top: 1px solid #f2f2f2;
+	padding: 20px;
+}
+
+.gf-odoo-page .gform-settings-description {
+	color: #888;
+	font-size: 12px;
+	margin: 0 0 16px;
+}
+
+.gf-odoo-page .gform-settings-field > .gform-settings-description,
+.gf-odoo-page .gform-settings-field span.gform-settings-description {
+	display: block;
+	margin: 4px 0 10px;
+	line-height: 1.45;
+	max-width: 52em;
+}
+
+.gf_settings_fields .gform-settings-description,
+.gf_settings_fields span.gform-settings-description {
+	display: block;
+	color: #888 !important;
+	font-size: 11.5px !important;
+	margin: 4px 0 8px !important;
+	line-height: 1.45 !important;
+}
+
+.gf-odoo-page #gform-settings.gform_settings_form {
+	margin: 0;
+}
+
+.gf-odoo-page .gform-settings-save-container {
+	background: #fafafa;
+	border: 1px solid #e8e8e8;
+	border-radius: 10px;
+	margin-top: 0;
+	padding: 12px 20px;
+}
+
+.gf-odoo-page .gform-settings-save-container .button-primary {
+	background: var(--gf-odoo-accent);
+	border-color: var(--gf-odoo-accent-hover);
+	border-radius: 6px;
+	font-size: 13px;
+	font-weight: 500;
+	padding: 8px 18px;
+}
+
+.gf-odoo-page .gform-settings-save-container .button-primary:hover {
+	background: var(--gf-odoo-accent-hover);
+	border-color: var(--gf-odoo-accent-active);
+}
+
+/* === 5. Form fields === */
+
+.gf-odoo-field {
+	margin-bottom: 16px;
+}
+
+.gf-odoo-field:last-child {
+	margin-bottom: 0;
+}
+
+.gf-odoo-label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12.5px;
+	font-weight: 500;
+	color: #3a3a3a;
+	margin-bottom: 6px;
+}
+
+.gf-odoo-label .req {
+	font-size: 10px;
+	color: #dc2626;
+	background: #fef2f2;
+	padding: 1px 5px;
+	border-radius: 3px;
+	font-weight: 500;
+}
+
+.gf-odoo-input,
+.gf-odoo-select {
+	width: 100%;
+	max-width: 100%;
+	padding: 8px 12px;
+	border: 1px solid #e0e0e0;
+	border-radius: 6px;
+	font-size: 13px;
+	color: #1e1e2e;
+	background: #fafafa;
+	transition: border-color 0.15s, background 0.15s;
+	appearance: none;
+	box-sizing: border-box;
+}
+
+.gf-odoo-input:focus,
+.gf-odoo-select:focus {
+	outline: none;
+	border-color: var(--gf-odoo-accent);
+	background: #fff;
+	box-shadow: 0 0 0 3px var(--gf-odoo-accent-12);
+}
+
+.gf-odoo-select {
+	background-color: #fafafa;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23888' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 10px center;
+	padding-right: 30px;
+}
+
+.gf-odoo-hint {
+	font-size: 11.5px;
+	color: #999;
+	margin-top: 4px;
+}
+
+.gf-odoo-page .gform-settings-field {
+	border-bottom: 1px solid #f5f5f5;
+	padding: 16px 0;
+	margin: 0;
+}
+
+.gf-odoo-page .gform-settings-field:last-child {
+	border-bottom: none;
+}
+
+.gf-odoo-page .gform-settings-label {
+	font-size: 12.5px;
+	font-weight: 500;
+	color: #3a3a3a;
+}
+
+.gf-odoo-page .gform-settings-field input[type="text"],
+.gf-odoo-page .gform-settings-field input[type="password"],
+.gf-odoo-page .gform-settings-field input[type="email"],
+.gf-odoo-page .gform-settings-field select,
+.gf-odoo-page .gform-settings-field textarea {
+	border: 1px solid #e0e0e0;
+	border-radius: 6px;
+	padding: 8px 12px;
+	font-size: 13px;
+	box-shadow: none;
+}
+
+.gf-odoo-page .gform-settings-field input:focus,
+.gf-odoo-page .gform-settings-field select:focus,
+.gf-odoo-page .gform-settings-field textarea:focus {
+	border-color: var(--gf-odoo-accent);
+	box-shadow: 0 0 0 3px var(--gf-odoo-accent-12);
+}
+
+/* === 6. Buttons === */
+
+.gf-odoo-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 16px;
+	border-radius: 6px;
+	font-size: 12.5px;
+	font-weight: 500;
+	cursor: pointer;
+	border: none;
+	text-decoration: none;
+	transition: opacity 0.12s, background 0.12s, border-color 0.12s;
+	line-height: 1;
+	box-sizing: border-box;
+}
+
+.gf-odoo-btn:hover {
+	text-decoration: none;
+}
+
+.gf-odoo-btn-primary {
+	background: var(--gf-odoo-accent);
+	color: #fff;
+}
+
+.gf-odoo-btn-primary:hover {
+	background: var(--gf-odoo-accent-hover);
+	color: #fff;
+}
+
+.gf-odoo-btn-secondary {
+	background: #fff;
+	color: #333;
+	border: 1px solid #ddd;
+}
+
+.gf-odoo-btn-secondary:hover {
+	background: #f5f5f5;
+	color: #333;
+}
+
+.gf-odoo-btn-ghost {
+	background: transparent;
+	color: var(--gf-odoo-accent);
+	border: 1px solid var(--gf-odoo-accent-30-white);
+}
+
+.gf-odoo-btn-ghost:hover {
+	background: var(--gf-odoo-accent-8-white);
+	color: var(--gf-odoo-accent);
+}
+
+.gf-odoo-btn-danger {
+	background: #fff;
+	color: #dc2626;
+	border: 1px solid #fecaca;
+}
+
+.gf-odoo-btn-danger:hover {
+	background: #fef2f2;
+	color: #dc2626;
+}
+
+.gf-odoo-btn-sm {
+	padding: 5px 10px;
+	font-size: 11.5px;
+}
+
+/* Map WP/GF buttons inside plugin content */
+.gf-odoo-page .button,
+.gf-odoo-page .button-secondary {
+	border-radius: 6px;
+	font-size: 12.5px;
+}
+
+.gf-odoo-page .button-primary {
+	background: var(--gf-odoo-accent);
+	border-color: var(--gf-odoo-accent-hover);
+	border-radius: 6px;
+}
+
+.gf-odoo-page .button-primary:hover {
+	background: var(--gf-odoo-accent-hover);
+	border-color: var(--gf-odoo-accent-active);
+}
+
+/* === 7. Status indicators === */
+
+.gf-odoo-status {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 9px 12px;
+	border-radius: 6px;
+	font-size: 12.5px;
+	font-weight: 500;
+	margin: 0;
+}
+
+.gf-odoo-status-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+.gf-odoo-status-success,
+.gf-odoo-connection-status--success,
+.gf-odoo-connection-status--connected {
+	background: #f0faf5;
+	border: 1px solid #c6edd8;
+	color: #1a7c4a;
+}
+
+.gf-odoo-status-success .gf-odoo-status-dot,
+.gf-odoo-connection-status--success .gf-odoo-status-dot,
+.gf-odoo-connection-status--connected .gf-odoo-status-dot,
+.gf-odoo-connection-status--success .gf-odoo-connection-status__dot,
+.gf-odoo-connection-status--connected .gf-odoo-connection-status__dot {
+	background: #22c55e;
+}
+
+.gf-odoo-status-error,
+.gf-odoo-connection-status--error {
+	background: #fff5f5;
+	border: 1px solid #fecaca;
+	color: #b91c1c;
+}
+
+.gf-odoo-status-error .gf-odoo-status-dot,
+.gf-odoo-connection-status--error .gf-odoo-status-dot,
+.gf-odoo-connection-status--error .gf-odoo-connection-status__dot {
+	background: #ef4444;
+}
+
+.gf-odoo-status-pending,
+.gf-odoo-connection-status--unknown {
+	background: #fffbeb;
+	border: 1px solid #fde68a;
+	color: #92400e;
+}
+
+.gf-odoo-status-pending .gf-odoo-status-dot,
+.gf-odoo-connection-status--unknown .gf-odoo-status-dot,
+.gf-odoo-connection-status--unknown .gf-odoo-connection-status__dot {
+	background: #f59e0b;
+}
+
+.gf-odoo-connection-status {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.gf-odoo-connection-status__dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+.gf-odoo-test-result {
+	font-size: 12.5px;
+	margin-left: 8px;
+}
+
+/* === 8. Badges === */
+
+.gf-odoo-badge {
+	display: inline-block;
+	font-size: 10.5px;
+	font-weight: 500;
+	padding: 2px 7px;
+	border-radius: 4px;
+	white-space: nowrap;
+}
+
+.badge-crm,
+.gf-odoo-sync-badge--crm {
+	background: #eff6ff;
+	color: #1d4ed8;
+}
+
+.badge-helpdesk,
+.gf-odoo-sync-badge--helpdesk {
+	background: #fef3f2;
+	color: #b91c1c;
+}
+
+.badge-template {
+	background: var(--gf-odoo-accent-8-white);
+	color: var(--gf-odoo-accent);
+}
+
+.badge-override,
+.gf-odoo-override-badge {
+	background: #fffbeb;
+	color: #92400e;
+}
+
+.badge-success,
+.gf-odoo-sync-badge--success {
+	background: #f0fdf4;
+	color: #15803d;
+}
+
+.badge-failed,
+.gf-odoo-sync-badge--failed {
+	background: #fef2f2;
+	color: #dc2626;
+}
+
+.badge-retrying,
+.gf-odoo-sync-badge--retrying {
+	background: #fffbeb;
+	color: #92400e;
+}
+
+.badge-pending,
+.gf-odoo-sync-badge--pending {
+	background: #f8fafc;
+	color: #64748b;
+}
+
+.badge-skipped,
+.gf-odoo-sync-badge--skipped {
+	background: #f1f5f9;
+	color: #475569;
+}
+
+.gf-odoo-subheading {
+	margin: 8px 0 4px;
+	padding-top: 12px;
+	border-top: 1px solid #e2e8f0;
+	font-size: 14px;
+}
+
+/* "How it works" flow strip */
+.gf-odoo-flow {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: stretch;
+	gap: 4px;
+	margin: 4px 0 16px;
+}
+
+.gf-odoo-flow__step {
+	flex: 1 1 0;
+	min-width: 150px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 14px 12px;
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 8px;
+	text-align: center;
+}
+
+.gf-odoo-flow__icon {
+	font-size: 22px;
+	width: 22px;
+	height: 22px;
+	margin: 0 auto;
+	color: #2563eb;
+}
+
+.gf-odoo-flow__title {
+	font-weight: 600;
+	font-size: 13px;
+	color: #1e293b;
+}
+
+.gf-odoo-flow__text {
+	font-size: 12px;
+	line-height: 1.45;
+	color: #64748b;
+}
+
+.gf-odoo-flow__arrow {
+	align-self: center;
+	color: #cbd5e1;
+	font-size: 20px;
+}
+
+@media (max-width: 782px) {
+	.gf-odoo-flow {
+		flex-direction: column;
+	}
+
+	.gf-odoo-flow__arrow {
+		transform: rotate(90deg);
+	}
+}
+
+/* Inline note (e.g. AI privacy) */
+.gf-odoo-note {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 12px 14px;
+	border-radius: 8px;
+	line-height: 1.5;
+	margin: 0 0 8px;
+}
+
+.gf-odoo-note .dashicons {
+	flex: 0 0 auto;
+	margin-top: 1px;
+}
+
+.gf-odoo-note--info {
+	background: #eff6ff;
+	border: 1px solid #bfdbfe;
+	color: #1e40af;
+}
+
+.gf-odoo-note--info .dashicons {
+	color: #2563eb;
+}
+
+/* === 9. Tables === */
+
+.gf-odoo-table,
+.gf-odoo-page .widefat,
+.gf-odoo-page table.gf-odoo-dashboard-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13px;
+	background: #fff;
+	border: 1px solid #e8e8e8;
+	border-radius: 10px;
+	overflow: hidden;
+}
+
+.gf-odoo-table th,
+.gf-odoo-page .widefat thead th,
+.gf-odoo-page table.gf-odoo-dashboard-table thead th {
+	text-align: left;
+	padding: 10px 14px;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: #888;
+	background: #fafafa;
+	border-bottom: 1px solid #efefef;
+}
+
+.gf-odoo-table td,
+.gf-odoo-page .widefat tbody td,
+.gf-odoo-page table.gf-odoo-dashboard-table tbody td {
+	padding: 11px 14px;
+	border-bottom: 1px solid #f5f5f5;
+	color: #2a2a2a;
+	vertical-align: middle;
+}
+
+.gf-odoo-table tr:last-child td,
+.gf-odoo-page .widefat tbody tr:last-child td {
+	border-bottom: none;
+}
+
+.gf-odoo-table tbody tr:hover td,
+.gf-odoo-page .widefat tbody tr:hover td {
+	background: #fafafa;
+}
+
+.gf-odoo-table .actions {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.gf-odoo-page .wp-list-table {
+	border: 1px solid #e8e8e8;
+	border-radius: 10px;
+	overflow: hidden;
+}
+
+/* === 10. Feed settings (field mode tabs, override rows) === */
+
+.gf-odoo-crm-fields,
+.gf-odoo-helpdesk-fields {
+	background: #fff;
+	border: 1px solid #e8e8e8;
+	border-radius: 10px;
+	overflow: hidden;
+	margin-top: 12px;
+}
+
+.gf-odoo-field-row,
+.gf-odoo-crm-field-row {
+	display: grid;
+	grid-template-columns: 180px minmax(120px, max-content) minmax(200px, 1fr);
+	grid-template-areas: "label modes value";
+	align-items: center;
+	gap: 12px;
+	padding: 10px 14px;
+	border-bottom: 1px solid #f5f5f5;
+}
+
+.gf-odoo-crm-fields--template-linked .gf-odoo-crm-field-row {
+	grid-template-columns: 180px minmax(120px, max-content) minmax(180px, 1fr) minmax(130px, 200px);
+	grid-template-areas: "label modes value template";
+}
+
+.gf-odoo-crm-field-row__label {
+	grid-area: label;
+}
+
+.gf-odoo-crm-field-row__modes {
+	grid-area: modes;
+}
+
+.gf-odoo-crm-field-row__value {
+	grid-area: value;
+	min-width: 0;
+}
+
+.gf-odoo-crm-field-row__template {
+	grid-area: template;
+	justify-self: end;
+	text-align: right;
+}
+
+.gf-odoo-crm-field-row > .gf-odoo-mode-input {
+	display: none;
+}
+
+.gf-odoo-crm-field-row > .gf-odoo-field-help {
+	grid-column: 1 / -1;
+	margin: 0;
+}
+
+.gf-odoo-field-row:last-child,
+.gf-odoo-crm-field-row:last-child {
+	border-bottom: none;
+}
+
+.gf-odoo-field-row.is-off,
+.gf-odoo-crm-field-row.is-off {
+	opacity: 0.45;
+}
+
+.gf-odoo-crm-field-row__label {
+	font-size: 12.5px;
+	font-weight: 500;
+	color: #3a3a3a;
+}
+
+.gf-odoo-mode-tabs,
+.gf-odoo-crm-field-row__modes {
+	display: flex;
+	gap: 3px;
+	flex-wrap: wrap;
+}
+
+.gf-odoo-mode-tab {
+	font-size: 11.5px;
+	padding: 4px 10px;
+	border-radius: 5px;
+	border: 1px solid #e0e0e0;
+	background: transparent;
+	color: #888;
+	cursor: pointer;
+	transition: all 0.12s;
+	white-space: nowrap;
+	margin: 0;
+}
+
+.gf-odoo-mode-tab:hover {
+	border-color: #bbb;
+	color: #444;
+}
+
+.gf-odoo-mode-tab.is-active[data-mode="auto"] {
+	background: #f0fdf4;
+	color: #15803d;
+	border-color: #bbf7d0;
+}
+
+.gf-odoo-mode-tab.is-active[data-mode="field"] {
+	background: #fffbeb;
+	color: #92400e;
+	border-color: #fde68a;
+}
+
+.gf-odoo-mode-tab.is-active[data-mode="fixed"] {
+	background: #eff6ff;
+	color: #1d4ed8;
+	border-color: #bfdbfe;
+}
+
+.gf-odoo-mode-tab.is-active[data-mode="off"] {
+	background: #f8fafc;
+	color: #94a3b8;
+	border-color: #e2e8f0;
+}
+
+.gf-odoo-field-value,
+.gf-odoo-crm-field-row__value {
+	min-width: 160px;
+}
+
+.gf-odoo-crm-fields--template-linked .gf-odoo-crm-field-row__value {
+	min-width: 140px;
+}
+
+.gf-odoo-crm-field-row__value [data-mode-panel]:not(.is-visible) {
+	display: none;
+}
+
+.gf-odoo-multi-field-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.gf-odoo-multi-field-item select {
+	flex: 1;
+	min-width: 0;
+}
+
+.gf-odoo-multi-field-remove {
+	color: #b32d2e;
+	font-size: 18px;
+	line-height: 1;
+	padding: 0 4px;
+}
+
+.gf-odoo-multi-field-add {
+	margin-top: 4px;
+}
+
+.gf-odoo-crm-field-row__value select,
+.gf-odoo-crm-field-row__value input[type="text"],
+.gf-odoo-gf-field-select {
+	border: 1px solid #e0e0e0;
+	border-radius: 6px;
+	padding: 7px 10px;
+	font-size: 13px;
+}
+
+.gf-odoo-crm-field-row.gf-odoo-field--readonly .gf-odoo-crm-field-row__value {
+	opacity: 0.65;
+	pointer-events: none;
+}
+
+.gf-odoo-crm-field-row.gf-odoo-field--override {
+	background: #fffbeb;
+}
+
+.gf-odoo-crm-field-row__template .gf-odoo-linked-map-label {
+	margin: 0 0 6px;
+	font-size: 12px;
+	color: #475569;
+	line-height: 1.35;
+}
+
+.gf-odoo-field-map-summary {
+	margin: 0 0 6px;
+	font-size: 12.5px;
+	color: #1e293b;
+}
+
+.gf-odoo-override-bar {
+	grid-column: 1 / -1;
+	margin: 0 0 4px;
+	padding: 6px 10px;
+	background: #fffbeb;
+	border-radius: 5px;
+	border-left: 3px solid #f59e0b;
+	font-size: 11.5px;
+	color: #92400e;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.gf-odoo-reset-settings-btn {
+	color: #b91c1c;
+	border-color: #fecaca;
+}
+
+.gf-odoo-reset-settings-btn:hover {
+	color: #991b1b;
+	border-color: #fca5a5;
+}
+
+.gf-odoo-feed-template {
+	margin-bottom: 16px;
+	padding: 14px 16px;
+	background: var(--gf-odoo-accent-8-white);
+	border: 1px solid var(--gf-odoo-accent-30-white);
+	border-radius: 10px;
+}
+
+/* === 11. Dashboard === */
+
+.gf-odoo-metrics,
+.gf-odoo-dashboard-metrics {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+	gap: 12px;
+	margin-bottom: 20px;
+}
+
+.gf-odoo-metric,
+.gf-odoo-metric-card {
+	background: #fff;
+	border-radius: 10px;
+	border: 1px solid #e8e8e8;
+	padding: 16px;
+}
+
+.gf-odoo-metric-label,
+.gf-odoo-metric-card__label {
+	display: block;
+	font-size: 11px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: #888;
+	margin-bottom: 8px;
+}
+
+.gf-odoo-metric-value,
+.gf-odoo-metric-card__value {
+	display: block;
+	font-size: 26px;
+	font-weight: 700;
+	color: #1e1e2e;
+	line-height: 1;
+}
+
+.gf-odoo-metric-value.is-danger,
+.gf-odoo-metric-card--failed .gf-odoo-metric-card__value {
+	color: #dc2626;
+}
+
+.gf-odoo-metric-value.is-warning,
+.gf-odoo-metric-card--pending .gf-odoo-metric-card__value {
+	color: #d97706;
+}
+
+.gf-odoo-metric-value.is-success,
+.gf-odoo-metric-card--success .gf-odoo-metric-card__value {
+	color: #16a34a;
+}
+
+.gf-odoo-dashboard-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+}
+
+.gf-odoo-dashboard-panel {
+	background: #fff;
+	border-radius: 10px;
+	border: 1px solid #e8e8e8;
+	padding: 16px 20px;
+	margin: 0;
+}
+
+.gf-odoo-dashboard-panel--chart,
+.gf-odoo-dashboard-grid > .gf-odoo-card.gf-odoo-dashboard-panel--chart {
+	grid-column: 1 / -1;
+}
+
+.gf-odoo-dashboard-panel h2 {
+	font-size: 13.5px;
+	font-weight: 600;
+	color: #1e1e2e;
+	margin: 0 0 12px;
+}
+
+.gf-odoo-chart-wrap {
+	max-height: 280px;
+}
+
+.gf-odoo-connection-dot {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	margin-right: 6px;
+	vertical-align: middle;
+}
+
+.gf-odoo-connection-dot--connected {
+	background: #22c55e;
+}
+
+.gf-odoo-connection-dot--error {
+	background: #ef4444;
+}
+
+/* === 12. Template manager === */
+
+.gf-odoo-templates-wrap .gf-odoo-template-form .form-table {
+	margin: 0;
+}
+
+.gf-odoo-templates-wrap .form-table th {
+	padding: 0 16px 12px 0;
+	vertical-align: top;
+	width: 160px;
+	font-size: 12.5px;
+	font-weight: 500;
+	color: #3a3a3a;
+}
+
+.gf-odoo-templates-wrap .form-table td {
+	padding: 0 0 16px;
+}
+
+.gf-odoo-templates-wrap .gf-odoo-template-form h3 {
+	font-size: 13.5px;
+	font-weight: 600;
+	margin: 20px 0 0;
+	color: #1e1e2e;
+}
+
+.gf-odoo-templates-wrap .submit {
+	margin: 16px 0 0;
+	padding: 0;
+}
+
+/* === 13. Utilities === */
+
+.gf-odoo-webhook-log {
+	margin-top: 0;
+	max-width: none;
+}
+
+.gf-odoo-webhook-log.widefat {
+	border-radius: 10px;
+}
+
+.gf-odoo-entry-links {
+	margin: 8px 0 0;
+	padding-left: 1.2em;
+}
+
+.gf-odoo-entry-links li {
+	margin-bottom: 6px;
+}
+
+.gf-odoo-per-form-placeholder {
+	font-size: 12px;
+	color: #888;
+	font-style: italic;
+	margin: 0;
+}
+
+.gf-odoo-fields-debug-result table {
+	margin-top: 0;
+}
+
+.gf-odoo-empty-cell {
+	color: #aaa;
+}
+
+.gf-odoo-error-date {
+	white-space: nowrap;
+}
+
+.gf-odoo-status-sub {
+	font-size: 11px;
+	color: #888;
+	margin-top: 3px;
+	line-height: 1.3;
+}
+
+.gf-odoo-error-code {
+	display: inline-block;
+	font-size: 10.5px;
+	font-weight: 600;
+	color: #dc2626;
+	background: #fef2f2;
+	padding: 1px 6px;
+	border-radius: 3px;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	vertical-align: top;
+}
+
+.gf-odoo-error-message {
+	font-size: 12px;
+	color: #555;
+	margin-top: 4px;
+	line-height: 1.4;
+	word-break: break-word;
+}
+
+.gf-odoo-table-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	align-items: flex-start;
+}
+
+.gf-odoo-actions-note {
+	font-size: 11.5px;
+	color: #888;
+	line-height: 1.35;
+}
+
+/* Error log table column widths */
+.gf-odoo-error-table .column-created_at,
+.gf-odoo-error-table .column-date {
+	width: 140px;
+	white-space: nowrap;
+}
+
+.gf-odoo-error-table .column-form_id,
+.gf-odoo-error-table .column-form {
+	width: 130px;
+}
+
+.gf-odoo-error-table .column-entry_id,
+.gf-odoo-error-table .column-entry {
+	width: 64px;
+	text-align: center;
+}
+
+.gf-odoo-error-table .column-module {
+	width: 96px;
+}
+
+.gf-odoo-error-table .column-attempt {
+	width: 72px;
+	text-align: center;
+}
+
+.gf-odoo-error-table .column-sync_status,
+.gf-odoo-error-table .column-status {
+	width: 112px;
+	vertical-align: top;
+}
+
+.gf-odoo-error-table .column-error {
+	min-width: 180px;
+	max-width: 280px;
+	vertical-align: top;
+}
+
+.gf-odoo-error-table .column-error_actions,
+.gf-odoo-error-table .column-actions {
+	width: 128px;
+	vertical-align: top;
+}
+
+.gf-odoo-error-table td {
+	overflow: hidden;
+	vertical-align: top;
+}
+
+.gf-odoo-error-table thead th,
+.gf-odoo-error-table tfoot th {
+	vertical-align: middle;
+}
+
+@media (max-width: 1200px) {
+	.gf-odoo-dashboard-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* === Template sample form + remap modal === */
+
+.gf-odoo-label-note {
+	font-size: 11px;
+	color: #888;
+	font-weight: 400;
+}
+
+.gf-odoo-sample-form-select {
+	max-width: 360px;
+}
+
+.gf-odoo-notice--warning {
+	margin: 10px 0 0;
+	padding: 10px 12px;
+	border-radius: 6px;
+	background: #fffbeb;
+	border: 1px solid #fde68a;
+	color: #92400e;
+	font-size: 12.5px;
+}
+
+.gf-odoo-gf-field-select--needs-sample {
+	border-color: #f59e0b;
+}
+
+.gf-odoo-hint-block {
+	display: block;
+	margin-top: 4px;
+}
+
+.gf-odoo-template-field-config.is-loading {
+	opacity: 0.55;
+	pointer-events: none;
+	position: relative;
+}
+
+.gf-odoo-template-field-config.is-loading::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: rgba(255, 255, 255, 0.4);
+}
+
+.gf-odoo-remap-modal[hidden] {
+	display: none !important;
+}
+
+.gf-odoo-remap-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 100100;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
+}
+
+.gf-odoo-remap-modal__backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(15, 15, 30, 0.45);
+}
+
+.gf-odoo-remap-modal__dialog {
+	position: relative;
+	background: #fff;
+	border-radius: 10px;
+	border: 1px solid #e8e8e8;
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+	max-width: 640px;
+	width: 100%;
+	max-height: 85vh;
+	overflow: auto;
+}
+
+.gf-odoo-remap-modal__body {
+	padding: 20px 24px 24px;
+}
+
+.gf-odoo-remap-modal__body h3 {
+	margin: 0 0 12px;
+	font-size: 16px;
+	font-weight: 600;
+	color: #1e1e2e;
+}
+
+.gf-odoo-remap-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 16px;
+}
+
+/* GF feed settings: primary modal buttons must stay visible (GF resets unstyled buttons) */
+.gf-odoo-remap-modal .gf-odoo-btn-primary,
+.gf-odoo-remap-modal .gf-odoo-remap-confirm {
+	background: var(--wp-admin-theme-color, #2271b1) !important;
+	border: 1px solid var(--wp-admin-theme-color-darker-10, #135e96) !important;
+	color: #fff !important;
+}
+
+.gf-odoo-remap-modal .gf-odoo-btn-primary:hover,
+.gf-odoo-remap-modal .gf-odoo-remap-confirm:hover {
+	background: var(--wp-admin-theme-color-darker-10, #135e96) !important;
+	color: #fff !important;
+}
+
+.gf-odoo-remap-modal .gf-odoo-btn-secondary,
+.gf-odoo-remap-modal .gf-odoo-remap-manual {
+	background: #fff !important;
+	border: 1px solid #c3c4c7 !important;
+	color: #1d2327 !important;
+}
+
+.gf-odoo-remap-modal .gf-odoo-btn-ghost,
+.gf-odoo-remap-modal .gf-odoo-remap-cancel {
+	background: transparent !important;
+	border: 1px solid transparent !important;
+	color: #50575e !important;
+	text-decoration: underline;
+}
+
+.gf-odoo-remap-list {
+	margin: 0 0 12px;
+	padding-left: 0;
+	list-style: none;
+}
+
+.gf-odoo-remap-list li {
+	padding: 6px 0;
+	font-size: 13px;
+	border-bottom: 1px solid #f5f5f5;
+}
+
+.gf-odoo-remap-list--unmatched li {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+.gf-odoo-remap-unmatched-select {
+	min-width: 200px;
+}
+
+.gf-odoo-remap-table .gf-odoo-select {
+	min-width: 200px;
+}
+
+/* === GF form feed settings (scoped improvements) === */
+
+.gf_settings_fields .gfield_label,
+.gform-settings-field .gform-settings-label {
+	font-size: 12.5px !important;
+	font-weight: 500 !important;
+	color: #3a3a3a !important;
+}
+
+.gf_settings_fields input[type="text"],
+.gf_settings_fields input[type="password"],
+.gf_settings_fields input[type="email"],
+.gf_settings_fields select,
+.gf_settings_fields textarea {
+	border: 1px solid #e0e0e0 !important;
+	border-radius: 6px !important;
+	padding: 7px 10px !important;
+	font-size: 13px !important;
+	box-shadow: none !important;
+}
+
+.gf_settings_fields input[type="text"]:focus,
+.gf_settings_fields input[type="password"]:focus,
+.gf_settings_fields select:focus,
+.gf_settings_fields textarea:focus {
+	border-color: var(--gf-odoo-accent, var(--wp-admin-theme-color, #2271b1)) !important;
+	box-shadow: 0 0 0 3px var(--gf-odoo-accent-10, color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 10%, transparent)) !important;
+}
+
+.gf-odoo-checklist {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.gf-odoo-checklist li {
+	margin: 0 0 12px;
+	padding: 0;
+}
+
+.gf-odoo-checklist label {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	font-size: 14px;
+	line-height: 1.5;
+	cursor: pointer;
+}
+
+.gf-odoo-checklist input[type="checkbox"] {
+	margin-top: 3px;
+}
+
+.gf-odoo-field-help {
+	margin: 6px 0 0;
+	max-width: 42rem;
+}
+
+.gf-odoo-page--wide .gf-odoo-test-submission-card {
+	max-width: none;
+}
+
+/* === About page === */
+
+.gf-odoo-about-intro {
+	display: flex;
+	align-items: flex-start;
+	gap: 16px;
+}
+
+.gf-odoo-about-logo {
+	width: 48px;
+	height: 48px;
+	flex-shrink: 0;
+	object-fit: contain;
+}
+
+.gf-odoo-about-lead {
+	font-size: 14px;
+	line-height: 1.55;
+	color: #3a3a3a;
+	margin: 0 0 8px;
+	max-width: 40rem;
+}
+
+.gf-odoo-about-table {
+	margin: 0;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+}
+
+.gf-odoo-about-table th {
+	width: 140px;
+	font-weight: 500;
+	color: #666;
+}
+
+.gf-odoo-about-table td,
+.gf-odoo-about-table th {
+	padding: 10px 20px;
+	font-size: 13px;
+	vertical-align: top;
+}
+
+.gf-odoo-about-list {
+	margin: 0;
+	padding: 0 0 0 1.25em;
+	font-size: 13px;
+	line-height: 1.65;
+	color: #444;
+}
+
+.gf-odoo-about-list li {
+	margin-bottom: 6px;
+}
+
+.gf-odoo-about-list li:last-child {
+	margin-bottom: 0;
+}
+
+.gf-odoo-about-license {
+	font-size: 13px;
+	line-height: 1.6;
+	color: #555;
+	margin: 0 0 10px;
+	max-width: 40rem;
+}
+
+/* Hide GF tooltip icons; we use description text instead */
+.gf-odoo-page .gform-icon--question-mark,
+.gf-odoo-page .gfield_tooltip,
+.gf-odoo-page .tooltip,
+.gf-odoo-page a.tooltip,
+.gf-odoo-page .gf_tooltip,
+.gf_settings_fields .gform-icon--question-mark,
+.gf_settings_fields .gfield_tooltip,
+.gf_settings_fields .tooltip,
+.gf_settings_fields a.tooltip,
+.gf_settings_fields .gf_tooltip {
+	display: none !important;
+}
+
+#tab_gf_odoo_connector .gform-icon--question-mark,
+#tab_gf_odoo_connector .gfield_tooltip,
+#tab_gf_odoo_connector .tooltip,
+#tab_gf_odoo_connector a.tooltip,
+#tab_gf_odoo_connector .gf_tooltip {
+	display: none !important;
+}
+
+/* Description text below settings fields */
+.gf-odoo-page .description,
+.gf-odoo-page .gfield_description,
+.gf_settings_fields .description,
+.gf_settings_fields .gfield_description,
+#tab_gf_odoo_connector .description {
+	font-size: 12px;
+	color: var(--color-text-secondary, #888);
+	margin-top: 4px;
+	display: block;
+	line-height: 1.5;
+}
+
+/* Required field label */
+.gf-odoo-page .gfield_required,
+.gf-odoo-page .gform-field-label--type-required,
+.gf_settings_fields .gfield_required,
+.gf_settings_fields .gform-field-label--type-required,
+#tab_gf_odoo_connector .gfield_required,
+#tab_gf_odoo_connector .gform-field-label--type-required {
+	color: #dc2626;
+	font-size: 11px;
+	font-weight: 500;
+	margin-left: 4px;
+}

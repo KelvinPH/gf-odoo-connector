@@ -1,0 +1,14 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Dependencies / build artifacts
+node_modules/
+vendor/
+
+# Logs
+*.log

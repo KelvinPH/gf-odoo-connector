@@ -1,0 +1,22 @@
+/**
+ * GF Odoo Connector: WordPress admin submenu (scoped to plugin menu only)
+ *
+ * @package GF_Odoo_Connector
+ */
+
+#adminmenu #toplevel_page_gf_odoo_dashboard .wp-submenu li.current > a,
+#adminmenu #toplevel_page_gf_odoo_dashboard .wp-submenu li.current > a:hover {
+	color: #fff;
+	font-weight: 600;
+}
+
+#adminmenu #toplevel_page_gf_odoo_dashboard .wp-submenu a:hover {
+	color: #e0e0f0;
+}
+
+/* Subtle divider line above the first item of each menu group. */
+#adminmenu #toplevel_page_gf_odoo_dashboard .wp-submenu li.gf-odoo-nav-divider {
+	margin-top: 9px;
+	padding-top: 9px;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
