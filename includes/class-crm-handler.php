@@ -37,6 +37,8 @@ class CRM_Handler {
 		'name',
 		'type',
 		'contact_name',
+		'first_name',
+		'last_name',
 		'partner_name',
 		'partner_id',
 		'email_from',

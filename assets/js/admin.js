@@ -644,6 +644,33 @@
 			} );
 	}
 
+	function collectMultiFieldJson( $wrap ) {
+		var fields = [];
+
+		$wrap.find( '.gf-odoo-multi-field-item select.gf-odoo-gf-field-select' ).each( function () {
+			var $sel = $( this );
+			var id = $sel.val();
+
+			if ( ! id ) {
+				return;
+			}
+
+			var label = $sel.find( 'option:selected' ).data( 'field-label' ) || '';
+			fields.push( { field_id: id, field_label: label } );
+		} );
+
+		return { fields: fields };
+	}
+
+	function syncMultiFieldHidden( $wrap ) {
+		var $hidden = $wrap.find( '.gf-odoo-multi-field-json' );
+		if ( ! $hidden.length ) {
+			return;
+		}
+
+		$hidden.val( JSON.stringify( collectMultiFieldJson( $wrap ) ) );
+	}
+
 	function syncRowValueInputNames( $row ) {
 		var key = $row.data( 'key' );
 		if ( ! key ) {
@@ -652,6 +679,7 @@
 
 		var mode = $row.find( '.gf-odoo-mode-input' ).val() || 'off';
 		var settingName = '_gform_setting_' + key + '_value';
+		var $multi = $row.find( '.gf-odoo-multi-field' );
 
 		$row.find( 'select, input, textarea' ).each( function () {
 			var $el = $( this );
@@ -660,6 +688,11 @@
 				$el.hasClass( 'gf-odoo-mode-input' ) ||
 				$el.hasClass( 'gf-odoo-readonly-value-hidden' )
 			) {
+				return;
+			}
+
+			if ( $multi.length && ! $el.hasClass( 'gf-odoo-multi-field-json' ) ) {
+				$el.removeAttr( 'name' );
 				return;
 			}
 
@@ -679,6 +712,11 @@
 				$el.removeAttr( 'name' );
 			}
 		} );
+
+		if ( $multi.length && mode === 'field' ) {
+			syncMultiFieldHidden( $multi );
+			$multi.find( '.gf-odoo-multi-field-json' ).attr( 'name', settingName );
+		}
 	}
 
 	function setRowMode( $row, mode ) {
@@ -789,6 +827,45 @@
 		$( '.gf-odoo-crm-field-row' ).each( function () {
 			syncRowValueInputNames( $( this ) );
 		} );
+	} );
+
+	$( document ).on(
+		'change',
+		'.gf-odoo-multi-field select.gf-odoo-gf-field-select',
+		function () {
+			syncMultiFieldHidden( $( this ).closest( '.gf-odoo-multi-field' ) );
+		}
+	);
+
+	$( document ).on( 'click', '.gf-odoo-multi-field-add', function ( e ) {
+		e.preventDefault();
+		var $wrap = $( this ).closest( '.gf-odoo-multi-field' );
+		var $list = $wrap.find( '.gf-odoo-multi-field-list' );
+		var $first = $list.find( '.gf-odoo-multi-field-item' ).first();
+
+		if ( ! $first.length ) {
+			return;
+		}
+
+		var $clone = $first.clone();
+		$clone.find( 'select' ).val( '' );
+		$list.append( $clone );
+		syncMultiFieldHidden( $wrap );
+	} );
+
+	$( document ).on( 'click', '.gf-odoo-multi-field-remove', function ( e ) {
+		e.preventDefault();
+		var $wrap = $( this ).closest( '.gf-odoo-multi-field' );
+		var $list = $wrap.find( '.gf-odoo-multi-field-list' );
+		var $items = $list.find( '.gf-odoo-multi-field-item' );
+
+		if ( $items.length <= 1 ) {
+			$items.find( 'select' ).val( '' );
+		} else {
+			$( this ).closest( '.gf-odoo-multi-field-item' ).remove();
+		}
+
+		syncMultiFieldHidden( $wrap );
 	} );
 
 	$( document ).on(

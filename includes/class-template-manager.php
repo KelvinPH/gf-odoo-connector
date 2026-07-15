@@ -699,9 +699,25 @@ class Template_Manager {
 	 * @return bool
 	 */
 	private static function feed_meta_values_equal( $a, $b ): bool {
-		if ( is_array( $a ) || is_array( $b ) ) {
-			return GF_Odoo_Addon::get_field_mapping_id( $a ) === GF_Odoo_Addon::get_field_mapping_id( $b )
-				&& GF_Odoo_Addon::get_field_mapping_label( $a ) === GF_Odoo_Addon::get_field_mapping_label( $b );
+		$entries_a = GF_Odoo_Addon::get_field_mapping_entries( $a );
+		$entries_b = GF_Odoo_Addon::get_field_mapping_entries( $b );
+
+		if ( ! empty( $entries_a ) || ! empty( $entries_b ) ) {
+			if ( count( $entries_a ) !== count( $entries_b ) ) {
+				return false;
+			}
+
+			foreach ( $entries_a as $index => $entry ) {
+				$other = $entries_b[ $index ] ?? array();
+				if ( (string) ( $entry['field_id'] ?? '' ) !== (string) ( $other['field_id'] ?? '' ) ) {
+					return false;
+				}
+				if ( (string) ( $entry['field_label'] ?? '' ) !== (string) ( $other['field_label'] ?? '' ) ) {
+					return false;
+				}
+			}
+
+			return true;
 		}
 
 		return (string) $a === (string) $b;
@@ -744,6 +760,14 @@ class Template_Manager {
 			}
 		}
 
+		$labels_by_label = array();
+		foreach ( $labels as $value => $label ) {
+			$label_lower = strtolower( trim( (string) $label ) );
+			if ( '' !== $label_lower && ! isset( $labels_by_label[ $label_lower ] ) ) {
+				$labels_by_label[ $label_lower ] = $value;
+			}
+		}
+
 		foreach ( $field_rows as $row ) {
 			$key = (string) $row['key'];
 
@@ -752,6 +776,24 @@ class Template_Manager {
 			}
 
 			if ( 'field' !== (string) ( $meta[ $key . '_mode' ] ?? 'off' ) ) {
+				continue;
+			}
+
+			$stored_entries = GF_Odoo_Addon::get_field_mapping_entries( rgar( $meta, $key . '_value' ) );
+			if ( count( $stored_entries ) > 1 ) {
+				$new_entries = array();
+				foreach ( $stored_entries as $entry ) {
+					$label_lower = strtolower( trim( (string) ( $entry['field_label'] ?? '' ) ) );
+					if ( $label_lower && isset( $labels_by_label[ $label_lower ] ) ) {
+						$new_entries[] = array(
+							'field_id'    => (string) $labels_by_label[ $label_lower ],
+							'field_label' => (string) ( $entry['field_label'] ?? '' ),
+						);
+					} else {
+						$new_entries[] = $entry;
+					}
+				}
+				$meta[ $key . '_value' ] = array( 'fields' => $new_entries );
 				continue;
 			}
 

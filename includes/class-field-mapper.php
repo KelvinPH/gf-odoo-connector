@@ -249,30 +249,43 @@ class Field_Mapper {
 		$key = (string) $row['key'];
 		$raw = rgar( $this->feed_meta, $key . '_value' );
 
-		if ( is_array( $raw ) ) {
-			$field_id    = (string) ( $raw['field_id'] ?? '' );
-			$field_label = (string) ( $raw['field_label'] ?? '' );
-		} else {
-			$field_id    = trim( (string) $raw );
-			$field_label = '';
-		}
-
-		if ( '' === $field_id ) {
+		if ( ! class_exists( 'GF_Odoo_Addon' ) ) {
 			return null;
 		}
 
-		$value = $this->get_field_value( $field_id );
+		$entries = GF_Odoo_Addon::get_field_mapping_entries( $raw );
+		if ( empty( $entries ) ) {
+			return null;
+		}
 
-		if ( ( '' === $value || null === $value ) && '' !== $field_label ) {
-			$resolved_id = $this->find_field_id_by_label( $field_label );
-			if ( null !== $resolved_id ) {
-				$value = $this->get_field_value( $resolved_id );
+		$parts = array();
+		foreach ( $entries as $entry ) {
+			$field_id    = (string) ( $entry['field_id'] ?? '' );
+			$field_label = (string) ( $entry['field_label'] ?? '' );
+
+			if ( '' === $field_id ) {
+				continue;
+			}
+
+			$value = $this->get_field_value( $field_id );
+
+			if ( ( '' === $value || null === $value ) && '' !== $field_label ) {
+				$resolved_id = $this->find_field_id_by_label( $field_label );
+				if ( null !== $resolved_id ) {
+					$value = $this->get_field_value( $resolved_id );
+				}
+			}
+
+			if ( '' !== trim( (string) $value ) ) {
+				$parts[] = trim( (string) $value );
 			}
 		}
 
-		if ( '' === $value || null === $value ) {
+		if ( empty( $parts ) ) {
 			return null;
 		}
+
+		$value = implode( ' ', $parts );
 
 		$resolver = (string) rgar( $row, 'resolver', '' );
 		if ( '' !== $resolver ) {
@@ -1565,6 +1578,31 @@ class Field_Mapper {
 						'value' => $field_id . '.' . $suffix,
 						'label' => sprintf(
 							/* translators: 1: parent field label, 2: address sub-field label, 3: field ID, 4: input suffix */
+							__( '%1$s → %2$s (field %3$s.%4$s)', 'gf-odoo-connector' ),
+							$label,
+							$sub_label,
+							(string) $field_id,
+							$suffix
+						),
+					);
+				}
+				continue;
+			}
+
+			if ( 'name' === $type ) {
+				$sub_fields = array(
+					'2' => __( 'Prefix', 'gf-odoo-connector' ),
+					'3' => __( 'First', 'gf-odoo-connector' ),
+					'4' => __( 'Middle', 'gf-odoo-connector' ),
+					'6' => __( 'Last', 'gf-odoo-connector' ),
+					'8' => __( 'Suffix', 'gf-odoo-connector' ),
+				);
+
+				foreach ( $sub_fields as $suffix => $sub_label ) {
+					$choices[] = array(
+						'value' => $field_id . '.' . $suffix,
+						'label' => sprintf(
+							/* translators: 1: parent field label, 2: name sub-field label, 3: field ID, 4: input suffix */
 							__( '%1$s → %2$s (field %3$s.%4$s)', 'gf-odoo-connector' ),
 							$label,
 							$sub_label,

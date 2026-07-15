@@ -851,6 +851,29 @@
 	display: none;
 }
 
+.gf-odoo-multi-field-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.gf-odoo-multi-field-item select {
+	flex: 1;
+	min-width: 0;
+}
+
+.gf-odoo-multi-field-remove {
+	color: #b32d2e;
+	font-size: 18px;
+	line-height: 1;
+	padding: 0 4px;
+}
+
+.gf-odoo-multi-field-add {
+	margin-top: 4px;
+}
+
 .gf-odoo-crm-field-row__value select,
 .gf-odoo-crm-field-row__value input[type="text"],
 .gf-odoo-gf-field-select {

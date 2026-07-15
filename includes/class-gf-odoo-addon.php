@@ -3656,6 +3656,93 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	}
 
 	/**
+	 * Whether a field row supports mapping multiple GF fields into one Odoo value.
+	 *
+	 * @param array $row Field row definition.
+	 *
+	 * @return bool
+	 */
+	public static function supports_multi_field_mapping( array $row ): bool {
+		if ( ! empty( $row['multi_field'] ) ) {
+			return true;
+		}
+
+		$fixed_type = (string) rgar( $row, 'fixed_type', 'text' );
+
+		if ( in_array( $fixed_type, array( 'odoo_select', 'static_select', 'boolean', 'date' ), true ) ) {
+			return false;
+		}
+
+		if ( ! empty( $row['resolver'] ) ) {
+			return false;
+		}
+
+		return 'text' === $fixed_type;
+	}
+
+	/**
+	 * Normalize a stored field mapping to a list of GF field entries.
+	 *
+	 * @param mixed $raw Stored _value.
+	 *
+	 * @return array<int, array{field_id: string, field_label: string}>
+	 */
+	public static function get_field_mapping_entries( $raw ): array {
+		if ( is_string( $raw ) ) {
+			$trimmed = trim( $raw );
+			if ( str_starts_with( $trimmed, '{' ) ) {
+				$decoded = json_decode( $trimmed, true );
+				if ( is_array( $decoded ) ) {
+					$raw = $decoded;
+				}
+			}
+		}
+
+		if ( is_array( $raw ) && isset( $raw['fields'] ) && is_array( $raw['fields'] ) ) {
+			$entries = array();
+			foreach ( $raw['fields'] as $item ) {
+				if ( ! is_array( $item ) ) {
+					continue;
+				}
+				$field_id = trim( (string) ( $item['field_id'] ?? '' ) );
+				if ( '' === $field_id ) {
+					continue;
+				}
+				$entries[] = array(
+					'field_id'    => $field_id,
+					'field_label' => trim( (string) ( $item['field_label'] ?? '' ) ),
+				);
+			}
+
+			return $entries;
+		}
+
+		if ( is_array( $raw ) && isset( $raw['field_id'] ) ) {
+			$field_id = trim( (string) $raw['field_id'] );
+			if ( '' !== $field_id ) {
+				return array(
+					array(
+						'field_id'    => $field_id,
+						'field_label' => trim( (string) ( $raw['field_label'] ?? '' ) ),
+					),
+				);
+			}
+		}
+
+		$field_id = trim( (string) $raw );
+		if ( '' !== $field_id ) {
+			return array(
+				array(
+					'field_id'    => $field_id,
+					'field_label' => '',
+				),
+			);
+		}
+
+		return array();
+	}
+
+	/**
 	 * Extract GF field ID from a field mapping value (string or array).
 	 *
 	 * @param mixed $raw Stored _value.
@@ -3663,11 +3750,12 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	 * @return string
 	 */
 	public static function get_field_mapping_id( $raw ): string {
-		if ( is_array( $raw ) ) {
-			return trim( (string) ( $raw['field_id'] ?? '' ) );
+		$entries = self::get_field_mapping_entries( $raw );
+		if ( empty( $entries ) ) {
+			return '';
 		}
 
-		return trim( (string) $raw );
+		return (string) $entries[0]['field_id'];
 	}
 
 	/**
@@ -3678,11 +3766,27 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	 * @return string
 	 */
 	public static function get_field_mapping_label( $raw ): string {
-		if ( is_array( $raw ) ) {
-			return trim( (string) ( $raw['field_label'] ?? '' ) );
+		$entries = self::get_field_mapping_entries( $raw );
+		if ( empty( $entries ) ) {
+			return '';
 		}
 
-		return '';
+		if ( count( $entries ) === 1 ) {
+			return (string) $entries[0]['field_label'];
+		}
+
+		$labels = array();
+		foreach ( $entries as $entry ) {
+			$label = trim( (string) ( $entry['field_label'] ?? '' ) );
+			if ( '' === $label ) {
+				$label = (string) ( $entry['field_id'] ?? '' );
+			}
+			if ( '' !== $label ) {
+				$labels[] = $label;
+			}
+		}
+
+		return implode( ' + ', $labels );
 	}
 
 	/**
@@ -3941,12 +4045,36 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		}
 
 		if ( 'field' === $mode ) {
-			$field_id = self::get_field_mapping_id( $saved_raw );
+			$entries = self::get_field_mapping_entries( $saved_raw );
+			if ( empty( $entries ) ) {
+				return '';
+			}
+
+			if ( count( $entries ) > 1 ) {
+				$labels = array();
+				foreach ( $entries as $entry ) {
+					$label = trim( (string) ( $entry['field_label'] ?? '' ) );
+					if ( '' === $label && $form_id > 0 ) {
+						$label = self::lookup_gf_field_label( $form_id, (string) ( $entry['field_id'] ?? '' ) );
+					}
+					$labels[] = '' !== $label
+						? $label
+						: sprintf(
+							/* translators: %s: Gravity Forms field ID */
+							__( 'Field #%s', 'gf-odoo-connector' ),
+							(string) ( $entry['field_id'] ?? '' )
+						);
+				}
+
+				return implode( ' + ', $labels );
+			}
+
+			$field_id = (string) ( $entries[0]['field_id'] ?? '' );
 			if ( '' === $field_id ) {
 				return '';
 			}
 
-			$label = self::get_field_mapping_label( $saved_raw );
+			$label = (string) ( $entries[0]['field_label'] ?? '' );
 			if ( '' === $label && $form_id > 0 ) {
 				$label = self::lookup_gf_field_label( $form_id, $field_id );
 			}
@@ -3995,7 +4123,9 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		$parts[] = sprintf(
 			'<div class="gf-odoo-value-field%1$s" data-mode-panel="field">%2$s</div>',
 			'field' === $mode ? ' is-visible' : '',
-			$this->render_crm_gf_field_select( $name_attr, $field_id, $form_id, $is_template, $is_readonly, $sample_form_id, $field_posts, $stored_field_label )
+			self::supports_multi_field_mapping( $row )
+				? $this->render_crm_multi_field_inputs( $name_attr, $saved_value, $form_id, $is_template, $is_readonly, $sample_form_id, $field_posts )
+				: $this->render_crm_gf_field_select( $name_attr, $field_id, $form_id, $is_template, $is_readonly, $sample_form_id, $field_posts, $stored_field_label )
 		);
 
 		$fixed_type = (string) rgar( $row, 'fixed_type', 'text' );
@@ -4040,6 +4170,66 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		}
 
 		return implode( '', $parts );
+	}
+
+	/**
+	 * Multi-select GF field mapping UI (values combined with a space).
+	 *
+	 * @param string $name_attr        Setting name for the hidden JSON payload.
+	 * @param mixed  $saved_value      Stored mapping value.
+	 * @param int    $form_id          Form ID.
+	 * @param bool   $is_template      Template editor context.
+	 * @param bool   $is_readonly      Read-only linked feed row.
+	 * @param int    $sample_form_id   Sample form for templates.
+	 * @param bool   $include_in_post  Whether the hidden input should post.
+	 *
+	 * @return string
+	 */
+	private function render_crm_multi_field_inputs( string $name_attr, $saved_value, int $form_id, bool $is_template = false, bool $is_readonly = false, int $sample_form_id = 0, bool $include_in_post = true ): string {
+		$entries = self::get_field_mapping_entries( $saved_value );
+		if ( empty( $entries ) ) {
+			$entries = array(
+				array(
+					'field_id'    => '',
+					'field_label' => '',
+				),
+			);
+		}
+
+		$items = '';
+		foreach ( $entries as $entry ) {
+			$items .= sprintf(
+				'<div class="gf-odoo-multi-field-item">%1$s<button type="button" class="button-link gf-odoo-multi-field-remove" aria-label="%2$s">&times;</button></div>',
+				$this->render_crm_gf_field_select(
+					'',
+					(string) ( $entry['field_id'] ?? '' ),
+					$form_id,
+					$is_template,
+					$is_readonly,
+					$sample_form_id,
+					false,
+					(string) ( $entry['field_label'] ?? '' )
+				),
+				esc_attr__( 'Remove field', 'gf-odoo-connector' )
+			);
+		}
+
+		$stored = array( 'fields' => $entries );
+		$name_fragment = $this->render_setting_control_name( $name_attr, $include_in_post && ! $is_readonly );
+
+		return sprintf(
+			'<div class="gf-odoo-multi-field">'
+			. '<input type="hidden" class="gf-odoo-multi-field-json"%1$s value="%2$s" />'
+			. '<div class="gf-odoo-multi-field-list">%3$s</div>'
+			. '<button type="button" class="button gf-odoo-multi-field-add">%4$s</button>'
+			. '<p class="gf-odoo-hint gf-odoo-mb-0">%5$s</p>'
+			. '</div>',
+			$name_fragment,
+			esc_attr( wp_json_encode( $stored ) ),
+			$items,
+			esc_html__( 'Add field', 'gf-odoo-connector' ),
+			esc_html__( 'Multiple form fields are combined with a space.', 'gf-odoo-connector' )
+		);
 	}
 
 	/**
@@ -4877,6 +5067,37 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			}
 		}
 
+		if ( is_array( $raw ) && isset( $raw['fields'] ) && is_array( $raw['fields'] ) ) {
+			$entries = array();
+			foreach ( $raw['fields'] as $item ) {
+				if ( ! is_array( $item ) ) {
+					continue;
+				}
+				$field_id = sanitize_text_field( (string) ( $item['field_id'] ?? '' ) );
+				if ( '' === $field_id ) {
+					continue;
+				}
+				$field_label = sanitize_text_field( (string) ( $item['field_label'] ?? '' ) );
+				if ( '' === $field_label && $sample_form_id > 0 ) {
+					$field_label = self::lookup_gf_field_label( $sample_form_id, $field_id );
+				}
+				$entries[] = array(
+					'field_id'    => $field_id,
+					'field_label' => $field_label,
+				);
+			}
+
+			if ( empty( $entries ) ) {
+				return '';
+			}
+
+			if ( 1 === count( $entries ) ) {
+				return $entries[0];
+			}
+
+			return array( 'fields' => $entries );
+		}
+
 		if ( is_array( $raw ) ) {
 			$field_id    = sanitize_text_field( (string) ( $raw['field_id'] ?? '' ) );
 			$field_label = sanitize_text_field( (string) ( $raw['field_label'] ?? '' ) );
@@ -5156,9 +5377,25 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	 * @return bool
 	 */
 	private function feed_meta_values_equal( $a, $b ): bool {
-		if ( is_array( $a ) || is_array( $b ) ) {
-			return self::get_field_mapping_id( $a ) === self::get_field_mapping_id( $b )
-				&& self::get_field_mapping_label( $a ) === self::get_field_mapping_label( $b );
+		$entries_a = self::get_field_mapping_entries( $a );
+		$entries_b = self::get_field_mapping_entries( $b );
+
+		if ( ! empty( $entries_a ) || ! empty( $entries_b ) ) {
+			if ( count( $entries_a ) !== count( $entries_b ) ) {
+				return false;
+			}
+
+			foreach ( $entries_a as $index => $entry ) {
+				$other = $entries_b[ $index ] ?? array();
+				if ( (string) ( $entry['field_id'] ?? '' ) !== (string) ( $other['field_id'] ?? '' ) ) {
+					return false;
+				}
+				if ( (string) ( $entry['field_label'] ?? '' ) !== (string) ( $other['field_label'] ?? '' ) ) {
+					return false;
+				}
+			}
+
+			return true;
 		}
 
 		return (string) $a === (string) $b;

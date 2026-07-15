@@ -29,6 +29,7 @@ class CRM_Field_Config {
 				'modes'      => array( 'field', 'fixed' ),
 				'required'   => true,
 				'fixed_type' => 'text',
+				'multi_field' => true,
 			),
 			array(
 				'key'        => 'contact_email',
@@ -113,6 +114,24 @@ class CRM_Field_Config {
 				'modes'      => array( 'auto', 'field', 'fixed' ),
 				'required'   => true,
 				'auto_label' => __( 'Form title', 'gf-odoo-connector' ),
+				'fixed_type' => 'text',
+			),
+			array(
+				'key'        => 'lead_first_name',
+				'label'      => __( 'First name', 'gf-odoo-connector' ),
+				'section'    => 'lead',
+				'odoo_field' => 'first_name',
+				'modes'      => array( 'field', 'fixed', 'off' ),
+				'required'   => false,
+				'fixed_type' => 'text',
+			),
+			array(
+				'key'        => 'lead_last_name',
+				'label'      => __( 'Last name', 'gf-odoo-connector' ),
+				'section'    => 'lead',
+				'odoo_field' => 'last_name',
+				'modes'      => array( 'field', 'fixed', 'off' ),
+				'required'   => false,
 				'fixed_type' => 'text',
 			),
 			array(
