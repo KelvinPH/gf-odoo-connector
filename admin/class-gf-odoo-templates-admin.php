@@ -24,7 +24,7 @@ class GF_Odoo_Templates_Admin {
 	 */
 	public function __construct( GF_Odoo_Addon $addon ) {
 		$this->addon = $addon;
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_editor_assets' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_editor_assets' ), 20 );
 	}
 
 	/**
@@ -37,23 +37,21 @@ class GF_Odoo_Templates_Admin {
 
 		wp_enqueue_script( 'jquery' );
 
-		$admin_js      = GF_ODOO_PATH . 'assets/js/admin.js';
-		$templates_js  = GF_ODOO_PATH . 'assets/js/templates.js';
-		$admin_ver     = GF_ODOO_VERSION . '.' . ( file_exists( $admin_js ) ? (string) filemtime( $admin_js ) : '0' );
-		$templates_ver = GF_ODOO_VERSION . '.' . ( file_exists( $templates_js ) ? (string) filemtime( $templates_js ) : '0' );
+		wp_deregister_script( 'gf_odoo_admin' );
+		wp_deregister_script( 'gf_odoo_templates' );
 
 		wp_enqueue_script(
 			'gf_odoo_admin',
 			GF_ODOO_URL . 'assets/js/admin.js',
 			array( 'jquery' ),
-			$admin_ver,
+			gf_odoo_asset_version( 'assets/js/admin.js' ),
 			true
 		);
 		wp_enqueue_script(
 			'gf_odoo_templates',
 			GF_ODOO_URL . 'assets/js/templates.js',
 			array( 'jquery', 'gf_odoo_admin' ),
-			$templates_ver,
+			gf_odoo_asset_version( 'assets/js/templates.js' ),
 			true
 		);
 

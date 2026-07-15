@@ -86,6 +86,7 @@ class GF_Odoo_GitHub_Updater {
 		add_filter( 'plugins_api', array( $this, 'plugin_info' ), 10, 3 );
 		add_filter( 'upgrader_source_selection', array( $this, 'rename_source_dir' ), 10, 4 );
 		add_action( 'upgrader_process_complete', array( $this, 'flush_cache_after_update' ), 10, 2 );
+		add_action( 'admin_notices', array( $this, 'maybe_show_update_check_notice' ) );
 
 		// Force a fresh GitHub lookup when the user clicks "Check again".
 		if ( isset( $_GET['force-check'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -241,6 +242,35 @@ class GF_Odoo_GitHub_Updater {
 		if ( 'update' === ( $data['action'] ?? '' ) && 'plugin' === ( $data['type'] ?? '' ) ) {
 			delete_transient( self::CACHE_KEY );
 		}
+	}
+
+	/**
+	 * Warn admins when the GitHub release check failed (Plugins screen only).
+	 */
+	public function maybe_show_update_check_notice(): void {
+		if ( ! current_user_can( 'update_plugins' ) ) {
+			return;
+		}
+
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen || 'plugins' !== $screen->id ) {
+			return;
+		}
+
+		if ( 'error' !== get_transient( self::CACHE_KEY ) ) {
+			return;
+		}
+
+		$check_url = admin_url( 'update-core.php?force-check=1' );
+
+		echo '<div class="notice notice-warning is-dismissible"><p>'
+			. esc_html__(
+				'GF Odoo Connector could not reach GitHub to check for updates. Your host may be blocking outbound requests to api.github.com.',
+				'gf-odoo-connector'
+			)
+			. ' <a href="' . esc_url( $check_url ) . '">'
+			. esc_html__( 'Check again', 'gf-odoo-connector' )
+			. '</a></p></div>';
 	}
 
 	/**

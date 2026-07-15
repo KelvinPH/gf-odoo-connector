@@ -2,6 +2,19 @@
 
 All notable changes to GF Odoo Connector are documented here.
 
+## [1.5.0] - 2026-07-15
+
+### Added
+
+- CRM lead **First name** and **Last name** fields (`crm.lead` → `first_name`, `last_name`).
+- **Multi-field mapping**: combine multiple Gravity Forms fields into one Odoo text field (e.g. first + last name → contact name).
+
+### Fixed
+
+- Feed template editor not saving field mappings when using multi-field rows or new CRM name fields.
+- Plugin version now matches the GitHub release tag (fixes WordPress repeatedly offering the same update and browsers serving stale admin JavaScript after an upgrade).
+- Admin JavaScript and CSS use file modification time for cache busting on all admin screens.
+
 ## [1.4.2] - 2026-07-15
 
 ### Added

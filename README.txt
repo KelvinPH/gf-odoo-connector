@@ -4,7 +4,7 @@ Tags: gravity forms, odoo, crm, helpdesk, integration
 Requires at least: 6.4
 Tested up to: 6.6
 Requires PHP: 8.0
-Stable tag: 1.4.2
+Stable tag: 1.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -77,6 +77,13 @@ Templates allow you to configure a feed once and apply it to multiple forms.
 4. Create a webhook for helpdesk.ticket or crm.lead with your URL and secret
 
 == Changelog ==
+
+= 1.5.0 =
+* CRM lead First name and Last name fields
+* Multi-field mapping: combine multiple GF fields into one Odoo text field
+* Fixed feed template editor not saving field mappings
+* Fixed plugin version matching GitHub release tags and stale cached admin JavaScript after upgrade
+* Admin JS/CSS cache busting uses file modification time on all screens
 
 = 1.4.2 =
 * CRM lead First name and Last name fields

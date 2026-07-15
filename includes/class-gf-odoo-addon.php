@@ -389,14 +389,14 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			'gf_odoo_admin',
 			GF_ODOO_URL . 'assets/css/admin.css',
 			array( 'dashicons' ),
-			GF_ODOO_VERSION
+			gf_odoo_asset_version( 'assets/css/admin.css' )
 		);
 
 		wp_enqueue_script(
 			'gf_odoo_admin',
 			GF_ODOO_URL . 'assets/js/admin.js',
 			array( 'jquery' ),
-			GF_ODOO_VERSION,
+			gf_odoo_asset_version( 'assets/js/admin.js' ),
 			true
 		);
 		$this->localize_admin_scripts();
@@ -406,7 +406,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 				'gf_odoo_templates',
 				GF_ODOO_URL . 'assets/js/templates.js',
 				array( 'jquery', 'gf_odoo_admin' ),
-				GF_ODOO_VERSION,
+				gf_odoo_asset_version( 'assets/js/templates.js' ),
 				true
 			);
 		}
@@ -650,7 +650,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		$scripts[] = array(
 			'handle'    => 'gf_odoo_admin',
 			'src'       => GF_ODOO_URL . 'assets/js/admin.js',
-			'version'   => GF_ODOO_VERSION,
+			'version'   => gf_odoo_asset_version( 'assets/js/admin.js' ),
 			'deps'      => array( 'jquery' ),
 			'in_footer' => true,
 			'enqueue'   => array(
@@ -679,7 +679,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		$scripts[] = array(
 			'handle'    => 'gf_odoo_templates',
 			'src'       => GF_ODOO_URL . 'assets/js/templates.js',
-			'version'   => GF_ODOO_VERSION,
+			'version'   => gf_odoo_asset_version( 'assets/js/templates.js' ),
 			'deps'      => array( 'jquery', 'gf_odoo_admin' ),
 			'in_footer' => true,
 			'enqueue'   => array(
