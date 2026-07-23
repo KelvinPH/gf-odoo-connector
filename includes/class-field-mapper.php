@@ -814,6 +814,9 @@ class Field_Mapper {
 
 			if ( 'contact' === $row['section'] ) {
 				$contact[ $odoo_field ] = is_scalar( $value ) ? (string) $value : '';
+				if ( 'customer_id' === $odoo_field && '' !== $contact[ $odoo_field ] ) {
+					$contact['company_name'] = $contact[ $odoo_field ];
+				}
 			} elseif ( 'product' === $row['section'] ) {
 				$product[ $odoo_field ] = $value;
 			} else {

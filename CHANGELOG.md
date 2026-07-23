@@ -2,6 +2,20 @@
 
 All notable changes to GF Odoo Connector are documented here.
 
+## [1.6.0] - 2026-07-20
+
+### Added
+
+- **Company + Person contacts**: CRM and Helpdesk syncs now create a Company (`res.partner` with `is_company=true`) and a linked Person (`parent_id`), instead of a single flat contact.
+- Companies are matched by exact name; persons by email. Same company with different people reuses the company record.
+- Person `first_name` / `last_name` are written to Odoo and verified after create/update.
+- Entry meta `odoo_company_id` plus “View company in Odoo” entry links.
+- Testing scenario: **Same company, different contacts**.
+
+### Changed
+
+- Feed settings sections renamed to **Company & contact fields**; mapped values are split automatically between company and person.
+
 ## [1.5.0] - 2026-07-15
 
 ### Added

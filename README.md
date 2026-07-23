@@ -2,7 +2,7 @@
 
 Connect [Gravity Forms](https://www.gravityforms.com/) to [Odoo](https://www.odoo.com/) CRM and Helpdesk. Form submissions are synced automatically to Odoo as leads, contacts, and support tickets.
 
-- **Version:** 1.5.0
+- **Version:** 1.6.0
 - **Requires:** WordPress 6.4+ · Gravity Forms 2.5+ · PHP 8.0+
 - **Tested with:** Odoo 19 Enterprise
 - **License:** GPL-2.0-or-later
@@ -130,6 +130,9 @@ How it works:
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history. Latest:
+
+### 1.6.0
+- Company + Person contact hierarchy for CRM and Helpdesk; company/person dedupe; person first/last name on `res.partner`; company entry meta and deep links.
 
 ### 1.5.0
 - CRM lead First name and Last name fields; multi-field mapping to combine GF fields into one Odoo text field; fixed feed template editor save for field mappings; fixed update/version cache issues.

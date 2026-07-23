@@ -38,6 +38,7 @@ delete_option( 'gf_odoo_api_key' );
 $meta_keys = array(
 	'odoo_lead_id',
 	'odoo_partner_id',
+	'odoo_company_id',
 	'odoo_ticket_id',
 	'odoo_sync_status',
 	'odoo_sync_at',

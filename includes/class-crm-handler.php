@@ -240,6 +240,11 @@ class CRM_Handler {
 			$data['partner_name'] = $partner['company_name'];
 		}
 
+		$company_name = trim( (string) rgar( $context, 'company_name', '' ) );
+		if ( '' !== $company_name ) {
+			$data['partner_name'] = $company_name;
+		}
+
 		$data['type']  = 'lead';
 		$feed_meta     = (array) rgar( $context, 'feed_meta', array() );
 		$crm_user_id   = (int) rgar( $feed_meta, 'crm_user_id' );

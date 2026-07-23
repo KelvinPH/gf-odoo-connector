@@ -25,12 +25,31 @@ class Helpdesk_Handler {
 	private $crm;
 
 	/**
+	 * Last company/person IDs from create_ticket() partner sync.
+	 *
+	 * @var array{company_id: int, person_id: int}
+	 */
+	private $last_partner_sync = array(
+		'company_id' => 0,
+		'person_id'  => 0,
+	);
+
+	/**
 	 * @param Odoo_API         $api Authenticated Odoo API client.
 	 * @param CRM_Handler|null $crm Optional CRM handler for partner lookup and deduplication.
 	 */
 	public function __construct( Odoo_API $api, ?CRM_Handler $crm = null ) {
 		$this->api = $api;
 		$this->crm = $crm;
+	}
+
+	/**
+	 * Company and person IDs from the most recent create_ticket() partner sync.
+	 *
+	 * @return array{company_id: int, person_id: int}
+	 */
+	public function get_last_partner_sync(): array {
+		return $this->last_partner_sync;
 	}
 
 	/**
@@ -395,6 +414,11 @@ class Helpdesk_Handler {
 	 * @throws RuntimeException         When the Odoo API call fails.
 	 */
 	public function create_ticket( array $data ): int {
+		$this->last_partner_sync = array(
+			'company_id' => 0,
+			'person_id'  => 0,
+		);
+
 		$allowed = Helpdesk_Field_Config::ticket_field_names();
 		$allowed = $this->expand_allowed_with_payload_fields( $data, $allowed );
 
@@ -424,14 +448,63 @@ class Helpdesk_Handler {
 			}
 		}
 
-		if ( ! empty( $data['partner_email'] ) && empty( $data['partner_id'] ) ) {
-			$partner_id = $this->find_or_create_contact(
-				(string) $data['partner_email'],
-				(string) ( $data['partner_name'] ?? '' ),
-				(string) ( $data['partner_phone'] ?? '' )
-			);
-			if ( null !== $partner_id ) {
-				$data['partner_id'] = $partner_id;
+		if (
+			empty( $data['partner_id'] )
+			&& (
+				! empty( $data['partner_email'] )
+				|| ! empty( $data['partner_name'] )
+				|| ! empty( $data['customer_id'] )
+				|| ! empty( $data['company_name'] )
+			)
+		) {
+			if ( null === $this->crm ) {
+				$this->crm = new CRM_Handler( $this->api );
+			}
+
+			$partner_handler = new Partner_Handler( $this->api, $this->crm );
+			$has_person      = ! empty( $data['partner_email'] ) || ! empty( $data['partner_name'] );
+
+			if ( $has_person ) {
+				$contact_blob = array();
+				foreach ( array( 'partner_name', 'partner_email', 'partner_phone', 'customer_id', 'company_name', 'country_id', 'state_id' ) as $field ) {
+					if ( ! empty( $data[ $field ] ) ) {
+						$contact_blob[ $field ] = $data[ $field ];
+					}
+				}
+
+				$lead_names   = array();
+				foreach ( array( 'first_name', 'last_name' ) as $field ) {
+					if ( ! empty( $data[ $field ] ) ) {
+						$lead_names[ $field ] = $data[ $field ];
+					}
+				}
+
+				$ids = $partner_handler->create_company_and_person( $contact_blob, $lead_names );
+
+				$this->last_partner_sync = array(
+					'company_id' => (int) $ids['company_id'],
+					'person_id'  => (int) $ids['person_id'],
+				);
+				$data['partner_id']      = $ids['person_id'];
+
+				if ( $ids['company_id'] > 0 ) {
+					$data['customer_id'] = $ids['company_id'];
+				}
+			} else {
+				$company_name = trim( (string) ( $data['company_name'] ?? $data['customer_id'] ?? '' ) );
+
+				if ( '' !== $company_name && ! is_numeric( $company_name ) ) {
+					$company_data = array( 'name' => $company_name );
+					foreach ( array( 'country_id', 'state_id' ) as $field ) {
+						if ( ! empty( $data[ $field ] ) ) {
+							$company_data[ $field ] = $data[ $field ];
+						}
+					}
+
+					$company_id = $partner_handler->create_or_update_company( $company_data );
+					$this->last_partner_sync['company_id'] = $company_id;
+					$data['customer_id']                   = $company_id;
+				}
 			}
 		}
 
@@ -486,16 +559,6 @@ class Helpdesk_Handler {
 			}
 
 			break;
-		}
-
-		if ( ! empty( $data['customer_id'] ) && ! is_numeric( $data['customer_id'] ) ) {
-			$customer_id = $this->find_customer_company_id( (string) $data['customer_id'] );
-
-			if ( $customer_id > 0 ) {
-				$data['customer_id'] = $customer_id;
-			} else {
-				unset( $data['customer_id'] );
-			}
 		}
 
 		if ( ! empty( $data['serial_id'] ) && ! is_numeric( $data['serial_id'] ) ) {

@@ -21,15 +21,16 @@ class GF_Odoo_Industry_Map {
      * Industry name (lowercase) => Odoo ID (res.partner.industry).
      */
     private static array $map = [
-        'corporate & enterprise' => 38,
+        'corporate & enterprise'  => 38,
         'education & research'    => 34,
         'fitness & sports'        => 35,
         'government & public'     => 37,
         'medical'                 => 33,
         'others'                  => 43,
         'paramedical'             => 42,
-        'professional sports'     => 36,
+        'professional sports'     => 36, 
         'wellness & beauty'       => 39,
+
     ];
 
     /**

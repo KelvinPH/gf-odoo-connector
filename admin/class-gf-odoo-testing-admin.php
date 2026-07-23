@@ -85,6 +85,7 @@ class GF_Odoo_Testing_Admin {
 			'bad_api_key'      => __( 'Invalid API key', 'gf-odoo-connector' ),
 			'missing_required' => __( 'Missing required lead/contact name', 'gf-odoo-connector' ),
 			'duplicate'        => __( 'Duplicate email (same contact)', 'gf-odoo-connector' ),
+			'same_company'     => __( 'Same company, different contacts', 'gf-odoo-connector' ),
 		);
 	}
 
@@ -419,7 +420,7 @@ class GF_Odoo_Testing_Admin {
 
 		$expect_fail = in_array( $scenario, array( 'bad_url', 'bad_api_key', 'missing_required' ), true );
 
-		if ( 'duplicate' === $scenario ) {
+		if ( 'duplicate' === $scenario || 'same_company' === $scenario ) {
 			$passed = ! empty( $result['duplicate_ok'] );
 		} elseif ( $expect_fail ) {
 			$passed = empty( $result['success'] ) && ! empty( $result['error_logged'] );

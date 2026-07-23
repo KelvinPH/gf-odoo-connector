@@ -323,40 +323,76 @@ class GF_Odoo_Country_Map {
     /**
      * Resolve a GF form field value to an Odoo country ID.
      *
-     * Tries exact name match, ISO code match, then partial name match.
-     * Returns null if no match found, so the field is skipped silently.
+     * Accepts plain names ("Netherlands"), ISO codes ("NL"), or Gravity Forms
+     * choice values like "Netherlands (NL)" / "Albania (AL)".
      *
-     * @param string $input Raw value from the GF entry (e.g. "Netherlands", "NL").
+     * @param string $input Raw value from the GF entry.
      *
      * @return int|null Odoo res.country ID, or null if unresolved.
-     *
-     * @example GF_Odoo_Country_Map::resolve( 'Netherlands' ); // 165
-     * @example GF_Odoo_Country_Map::resolve( 'NL' );          // 165
-     * @example GF_Odoo_Country_Map::resolve( 'Unknown' );     // null
      */
     public static function resolve( string $input ): ?int {
         $input = trim( $input );
-        if ( empty( $input ) ) return null;
-
-        // 1. Exact name match (case-insensitive)
-        $id = self::get_id_by_name( $input );
-        if ( $id ) return $id;
-
-        // 2. ISO code match (e.g. "NL", "DE")
-        if ( strlen( $input ) === 2 ) {
-            $id = self::get_id_by_code( $input );
-            if ( $id ) return $id;
+        if ( '' === $input ) {
+            return null;
         }
 
-        // 3. Partial / fuzzy: check if input is contained in a key
-        $lower = strtolower( $input );
-        foreach ( self::$map as $key => $data ) {
-            if ( str_contains( $key, $lower ) || str_contains( $lower, $key ) ) {
-                return $data['id'];
+        // Gravity Forms country choices often look like "Afghanistan (AF)".
+        if ( preg_match( '/^(.+?)\s*\(([A-Za-z]{2})\)\s*$/u', $input, $matches ) ) {
+            $name = trim( $matches[1] );
+            $code = strtoupper( $matches[2] );
+
+            $id = self::get_id_by_code( $code );
+            if ( null !== $id ) {
+                return $id;
+            }
+
+            $id = self::get_id_by_name( $name );
+            if ( null !== $id ) {
+                return $id;
+            }
+
+            // Fall through using the bare name for fuzzy matching.
+            $input = $name;
+        }
+
+        // Exact name match (case-insensitive).
+        $id = self::get_id_by_name( $input );
+        if ( null !== $id ) {
+            return $id;
+        }
+
+        // Bare ISO code (e.g. "NL", "DE").
+        if ( 2 === strlen( $input ) && ctype_alpha( $input ) ) {
+            $id = self::get_id_by_code( $input );
+            if ( null !== $id ) {
+                return $id;
             }
         }
 
-        return null;
+        // Longest-key containment match (avoids Niger matching Nigeria, etc.).
+        $lower   = strtolower( $input );
+        $best_id = null;
+        $best_len = 0;
+
+        foreach ( self::$map as $key => $data ) {
+            $key_len = strlen( $key );
+
+            // Skip short aliases (uk, usa, uae) for fuzzy matching — too many false positives.
+            if ( $key_len < 4 ) {
+                continue;
+            }
+
+            if ( $key === $lower ) {
+                return $data['id'];
+            }
+
+            if ( str_contains( $lower, $key ) && $key_len > $best_len ) {
+                $best_len = $key_len;
+                $best_id  = $data['id'];
+            }
+        }
+
+        return $best_id;
     }
 
     private static function build_code_map(): void {

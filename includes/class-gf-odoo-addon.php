@@ -533,6 +533,12 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			'is_default_column' => false,
 		);
 
+		$entry_meta['odoo_company_id'] = array(
+			'label'             => esc_html__( 'Odoo Company ID', 'gf-odoo-connector' ),
+			'is_numeric'        => true,
+			'is_default_column' => false,
+		);
+
 		$entry_meta['odoo_lead_id'] = array(
 			'label'             => esc_html__( 'Odoo Lead ID', 'gf-odoo-connector' ),
 			'is_numeric'        => true,
@@ -3126,9 +3132,9 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 				),
 			),
 			array(
-				'title'       => esc_html__( 'Contact fields', 'gf-odoo-connector' ),
+				'title'       => esc_html__( 'Company & contact fields', 'gf-odoo-connector' ),
 				'description' => esc_html__(
-					'Contact fields are stored on the res.partner record in Odoo and shared across CRM and Helpdesk. Configure how each field is filled. Required fields cannot be turned off.',
+					'Mapped values are split automatically in Odoo: company name and address go on a Company contact; name, email, and phone go on a Person linked to that company. Existing companies are matched by exact name.',
 					'gf-odoo-connector'
 				),
 				'dependency'  => array(
@@ -3198,9 +3204,9 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 				),
 			),
 			array(
-				'title'       => esc_html__( 'Contact fields', 'gf-odoo-connector' ),
+				'title'       => esc_html__( 'Company & contact fields', 'gf-odoo-connector' ),
 				'description' => esc_html__(
-					'Contact details and location fields for the ticket.',
+					'Mapped values are split automatically in Odoo: company name and address go on a Company contact; name, email, and phone go on a Person linked to that company. Existing companies are matched by exact name.',
 					'gf-odoo-connector'
 				),
 				'dependency'  => array(
@@ -6089,33 +6095,51 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			'CRM payload, partner: ' . wp_json_encode( $contact_data ) . ' lead: ' . wp_json_encode( $lead_data )
 		);
 
-		$crm        = new CRM_Handler( $api );
-		$partner_id = $crm->create_or_update_contact( $contact_data );
-		$lead_id    = $crm->create_lead(
+		$crm             = new CRM_Handler( $api );
+		$partner_handler = new Partner_Handler( $api, $crm );
+		$partner_ids     = $partner_handler->create_company_and_person( $contact_data, $lead_data );
+		$partner_id      = (int) $partner_ids['person_id'];
+		$company_id      = (int) $partner_ids['company_id'];
+		$lead_id         = $crm->create_lead(
 			$partner_id,
 			$lead_data,
 			array(
-				'partner'    => $contact_data,
-				'form_title' => (string) rgar( $payload, 'form_title', rgar( $job, 'form_title', '' ) ),
-				'feed_meta'  => (array) rgar( $payload, 'feed_meta', array() ),
+				'partner'      => $contact_data,
+				'company_name' => (string) $partner_ids['company_name'],
+				'form_title'   => (string) rgar( $payload, 'form_title', rgar( $job, 'form_title', '' ) ),
+				'feed_meta'    => (array) rgar( $payload, 'feed_meta', array() ),
 			)
 		);
 
 		gform_update_meta( $entry_id, 'odoo_lead_id', $lead_id, $form_id );
 		gform_update_meta( $entry_id, 'odoo_partner_id', $partner_id, $form_id );
+		if ( $company_id > 0 ) {
+			gform_update_meta( $entry_id, 'odoo_company_id', $company_id, $form_id );
+		}
 
 		$lead_summary = $crm->get_lead_summary( $lead_id );
 		$lead_label   = $lead_summary && '' !== $lead_summary['name']
 			? $lead_summary['name']
 			: sprintf( '#%d', $lead_id );
 
-		$note = sprintf(
-			/* translators: 1: partner ID, 2: lead ID, 3: lead title */
-			__( 'Odoo CRM: contact #%1$d, lead #%2$d (%3$s) created.', 'gf-odoo-connector' ),
-			$partner_id,
-			$lead_id,
-			$lead_label
-		);
+		if ( $company_id > 0 ) {
+			$note = sprintf(
+				/* translators: 1: company ID, 2: person ID, 3: lead ID, 4: lead title */
+				__( 'Odoo CRM: company #%1$d, contact #%2$d, lead #%3$d (%4$s) created.', 'gf-odoo-connector' ),
+				$company_id,
+				$partner_id,
+				$lead_id,
+				$lead_label
+			);
+		} else {
+			$note = sprintf(
+				/* translators: 1: partner ID, 2: lead ID, 3: lead title */
+				__( 'Odoo CRM: contact #%1$d, lead #%2$d (%3$s) created.', 'gf-odoo-connector' ),
+				$partner_id,
+				$lead_id,
+				$lead_label
+			);
+		}
 
 		$lead_url = $this->get_odoo_record_url( 'crm.lead', $lead_id );
 		if ( '' !== $lead_url ) {
@@ -6131,9 +6155,10 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 
 		$this->log_debug(
 			sprintf(
-				'CRM feed #%d processed for entry #%d: partner #%d, lead #%d.',
+				'CRM feed #%d processed for entry #%d: company #%d, partner #%d, lead #%d.',
 				$feed_id,
 				$entry_id,
+				$company_id,
 				$partner_id,
 				$lead_id
 			)
@@ -6160,6 +6185,14 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 
 		$helpdesk  = new Helpdesk_Handler( $api, new CRM_Handler( $api ) );
 		$ticket_id = $helpdesk->create_ticket( $ticket_data );
+
+		$partner_sync = $helpdesk->get_last_partner_sync();
+		if ( $partner_sync['person_id'] > 0 ) {
+			gform_update_meta( $entry_id, 'odoo_partner_id', (int) $partner_sync['person_id'], $form_id );
+		}
+		if ( $partner_sync['company_id'] > 0 ) {
+			gform_update_meta( $entry_id, 'odoo_company_id', (int) $partner_sync['company_id'], $form_id );
+		}
 
 		gform_update_meta( $entry_id, 'odoo_ticket_id', $ticket_id, $form_id );
 
@@ -8775,6 +8808,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		$assigned_to  = (string) gform_get_meta( $entry_id, 'odoo_assigned_to' );
 		$lead_id      = (int) gform_get_meta( $entry_id, 'odoo_lead_id' );
 		$partner_id   = (int) gform_get_meta( $entry_id, 'odoo_partner_id' );
+		$company_id   = (int) gform_get_meta( $entry_id, 'odoo_company_id' );
 		$ticket_id    = (int) gform_get_meta( $entry_id, 'odoo_ticket_id' );
 
 		if ( '' === $status ) {
@@ -8837,6 +8871,14 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 				echo '#' . esc_html( (string) $ticket_id );
 			}
 			echo '</p>';
+		}
+
+		if ( $company_id > 0 ) {
+			printf(
+				'<p><strong>%1$s</strong> %2$d</p>',
+				esc_html__( 'Company ID:', 'gf-odoo-connector' ),
+				$company_id
+			);
 		}
 
 		if ( $partner_id > 0 ) {
@@ -8942,8 +8984,19 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 
 		$links      = array();
 		$partner_id = (int) gform_get_meta( $entry_id, 'odoo_partner_id' );
+		$company_id = (int) gform_get_meta( $entry_id, 'odoo_company_id' );
 		$lead_id    = (int) gform_get_meta( $entry_id, 'odoo_lead_id' );
 		$ticket_id  = (int) gform_get_meta( $entry_id, 'odoo_ticket_id' );
+
+		if ( $company_id > 0 ) {
+			$url = $this->get_odoo_record_url( 'res.partner', $company_id );
+			if ( '' !== $url ) {
+				$links[] = array(
+					'label' => esc_html__( 'View company in Odoo', 'gf-odoo-connector' ),
+					'url'   => $url,
+				);
+			}
+		}
 
 		if ( $partner_id > 0 ) {
 			$url = $this->get_odoo_record_url( 'res.partner', $partner_id );
@@ -9602,7 +9655,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			);
 		}
 
-		$allowed = array( 'normal', 'bad_url', 'bad_api_key', 'missing_required', 'duplicate' );
+		$allowed = array( 'normal', 'bad_url', 'bad_api_key', 'missing_required', 'duplicate', 'same_company' );
 		if ( ! in_array( $scenario, $allowed, true ) ) {
 			$scenario = 'normal';
 		}
@@ -9626,6 +9679,10 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 
 			if ( 'duplicate' === $scenario ) {
 				return $this->run_duplicate_test_submission( $feed, $form );
+			}
+
+			if ( 'same_company' === $scenario ) {
+				return $this->run_same_company_test_submission( $feed, $form );
 			}
 
 			$entry = $this->build_dummy_entry_for_form( $form );
@@ -9702,11 +9759,14 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 	 * @return array<string, mixed>
 	 */
 	private function run_duplicate_test_submission( array $feed, array $form ): array {
-		$email     = 'gf-odoo-dup-test-' . time() . '@example.com';
-		$partner_1 = 0;
-		$partner_2 = 0;
-		$entry_ids = array();
-		$form_id   = (int) rgar( $form, 'id' );
+		$email        = 'gf-odoo-dup-test-' . time() . '@example.com';
+		$company_name = 'GF Odoo Duplicate Test Co ' . time();
+		$partner_1    = 0;
+		$partner_2    = 0;
+		$company_1    = 0;
+		$company_2    = 0;
+		$entry_ids    = array();
+		$form_id      = (int) rgar( $form, 'id' );
 
 		for ( $i = 0; $i < 2; $i++ ) {
 			$entry    = $this->build_dummy_entry_for_form( $form, $email );
@@ -9741,7 +9801,7 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 				);
 			}
 
-			$this->apply_duplicate_test_payload_overrides( $job, $email );
+			$this->apply_duplicate_test_payload_overrides( $job, $email, $company_name );
 
 			$job['is_manual']       = true;
 			$job['skip_auto_retry'] = true;
@@ -9760,21 +9820,35 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			}
 
 			$pid = $this->resolve_test_partner_id( $entry_id, $form_id, $email );
+			$cid = (int) gform_get_meta( $entry_id, 'odoo_company_id', $form_id );
 			if ( 0 === $i ) {
 				$partner_1 = $pid;
+				$company_1 = $cid;
 			} else {
 				$partner_2 = $pid;
+				$company_2 = $cid;
 			}
 		}
 
 		$duplicate_ok = $partner_1 > 0 && $partner_1 === $partner_2;
+		$company_ok   = $company_1 <= 0 || $company_1 === $company_2;
 
-		if ( $duplicate_ok ) {
+		if ( $duplicate_ok && $company_ok ) {
 			$message = sprintf(
-				/* translators: %d: Odoo partner ID */
-				__( 'Both submissions used the same Odoo contact (#%d).', 'gf-odoo-connector' ),
-				$partner_1
+				/* translators: 1: Odoo partner ID, 2: Odoo company ID */
+				__( 'Both submissions used the same Odoo contact (#%1$d) and company (#%2$d).', 'gf-odoo-connector' ),
+				$partner_1,
+				$company_1
 			);
+		} elseif ( $duplicate_ok && ! $company_ok ) {
+			$message = sprintf(
+				/* translators: 1: first company ID, 2: second company ID */
+				__( 'Same contact reused (#%1$d) but companies differ (#%2$d vs #%3$d).', 'gf-odoo-connector' ),
+				$partner_1,
+				$company_1,
+				$company_2
+			);
+			$duplicate_ok = false;
 		} elseif ( $partner_1 <= 0 || $partner_2 <= 0 ) {
 			$message = __( 'Could not resolve Odoo contact ID after sync. Check that the API user can read Contacts.', 'gf-odoo-connector' );
 		} else {
@@ -9793,18 +9867,135 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			'record_id'     => $partner_1,
 			'record_model'  => 'res.partner',
 			'record_url'    => $this->get_odoo_record_url( 'res.partner', $partner_1 ),
+			'company_id'    => $company_1,
 			'entry_id'      => $entry_ids[1] ?? 0,
 			'entry_url'     => isset( $entry_ids[1] ) ? admin_url( 'admin.php?page=gf_entries&view=entry&id=' . (int) rgar( $form, 'id' ) . '&lid=' . $entry_ids[1] ) : '',
 		);
 	}
 
 	/**
+	 * Same company, different people: two submissions share company_id, not partner_id.
+	 *
+	 * @param array $feed Feed.
+	 * @param array $form Form.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function run_same_company_test_submission( array $feed, array $form ): array {
+		$stamp        = (string) time();
+		$company_name = 'GF Odoo Same Company Test ' . $stamp;
+		$emails       = array(
+			'gf-odoo-co-a-' . $stamp . '@example.com',
+			'gf-odoo-co-b-' . $stamp . '@example.com',
+		);
+		$company_ids  = array();
+		$partner_ids  = array();
+		$entry_ids    = array();
+		$form_id      = (int) rgar( $form, 'id' );
+
+		foreach ( $emails as $index => $email ) {
+			$entry    = $this->build_dummy_entry_for_form( $form, $email );
+			$entry_id = GFAPI::add_entry( $entry );
+
+			if ( is_wp_error( $entry_id ) ) {
+				foreach ( $entry_ids as $eid ) {
+					GFAPI::delete_entry( $eid );
+				}
+
+				return array(
+					'success' => false,
+					'message' => $entry_id->get_error_message(),
+				);
+			}
+
+			$entry_id            = (int) $entry_id;
+			$entry_ids[]         = $entry_id;
+			$entry['id']         = $entry_id;
+			$entry['form_id']    = $form_id;
+
+			try {
+				$job = $this->build_async_job_payload( $feed, $entry, $form, 1 );
+			} catch ( Exception $e ) {
+				foreach ( $entry_ids as $eid ) {
+					GFAPI::delete_entry( $eid );
+				}
+
+				return array(
+					'success' => false,
+					'message' => $e->getMessage(),
+				);
+			}
+
+			$this->apply_duplicate_test_payload_overrides( $job, $email, $company_name );
+			$job['is_manual']       = true;
+			$job['skip_auto_retry'] = true;
+
+			if ( ! $this->process_sync_job( $job ) ) {
+				$msg = $this->get_last_sync_job_error() ?: esc_html__( 'Sync failed.', 'gf-odoo-connector' );
+
+				foreach ( $entry_ids as $eid ) {
+					GFAPI::delete_entry( $eid );
+				}
+
+				return array(
+					'success' => false,
+					'message' => $msg,
+				);
+			}
+
+			$partner_ids[] = $this->resolve_test_partner_id( $entry_id, $form_id, $email );
+			$company_ids[] = (int) gform_get_meta( $entry_id, 'odoo_company_id', $form_id );
+		}
+
+		$company_ok  = $company_ids[0] > 0 && $company_ids[0] === $company_ids[1];
+		$person_diff = $partner_ids[0] > 0 && $partner_ids[1] > 0 && $partner_ids[0] !== $partner_ids[1];
+		$passed      = $company_ok && $person_diff;
+
+		if ( $passed ) {
+			$message = sprintf(
+				/* translators: 1: company ID, 2: first person ID, 3: second person ID */
+				__( 'Same company (#%1$d) with two different contacts (#%2$d and #%3$d).', 'gf-odoo-connector' ),
+				$company_ids[0],
+				$partner_ids[0],
+				$partner_ids[1]
+			);
+		} elseif ( ! $company_ok ) {
+			$message = sprintf(
+				/* translators: 1: first company ID, 2: second company ID */
+				__( 'Expected one company but got #%1$d and #%2$d.', 'gf-odoo-connector' ),
+				$company_ids[0],
+				$company_ids[1]
+			);
+		} else {
+			$message = sprintf(
+				/* translators: 1: first person ID, 2: second person ID */
+				__( 'Expected different contacts but got #%1$d and #%2$d.', 'gf-odoo-connector' ),
+				$partner_ids[0],
+				$partner_ids[1]
+			);
+		}
+
+		return array(
+			'success'      => $passed,
+			'duplicate_ok' => $passed,
+			'message'      => $message,
+			'record_id'    => $company_ids[0],
+			'record_model' => 'res.partner',
+			'record_url'   => $this->get_odoo_record_url( 'res.partner', $company_ids[0] ),
+			'company_id'   => $company_ids[0],
+			'entry_id'     => $entry_ids[1] ?? 0,
+			'entry_url'    => isset( $entry_ids[1] ) ? admin_url( 'admin.php?page=gf_entries&view=entry&id=' . $form_id . '&lid=' . $entry_ids[1] ) : '',
+		);
+	}
+
+	/**
 	 * Ensure duplicate-test payloads include the same contact email (independent of feed field mapping).
 	 *
-	 * @param array  $job   Sync job.
-	 * @param string $email Shared test email.
+	 * @param array  $job          Sync job.
+	 * @param string $email        Shared test email.
+	 * @param string $company_name Optional shared company name.
 	 */
-	private function apply_duplicate_test_payload_overrides( array &$job, string $email ): void {
+	private function apply_duplicate_test_payload_overrides( array &$job, string $email, string $company_name = '' ): void {
 		if ( empty( $job['sync_payload'] ) || ! is_array( $job['sync_payload'] ) ) {
 			return;
 		}
@@ -9812,6 +10003,10 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 		$contact_name = __( 'GF Odoo Duplicate Test', 'gf-odoo-connector' );
 		$module       = (string) rgar( $job, 'module', '' );
 		$payload      = &$job['sync_payload'];
+
+		if ( '' === $company_name ) {
+			$company_name = 'GF Odoo Test Company ' . time();
+		}
 
 		if ( 'crm' === $module ) {
 			if ( ! isset( $payload['contact'] ) || ! is_array( $payload['contact'] ) ) {
@@ -9822,9 +10017,20 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			if ( empty( $payload['contact']['name'] ) ) {
 				$payload['contact']['name'] = $contact_name;
 			}
+			if ( empty( $payload['contact']['company_name'] ) ) {
+				$payload['contact']['company_name'] = $company_name;
+			}
 
 			if ( ! isset( $payload['lead'] ) || ! is_array( $payload['lead'] ) ) {
 				$payload['lead'] = array();
+			}
+
+			if ( empty( $payload['lead']['first_name'] ) ) {
+				$payload['lead']['first_name'] = 'Test';
+			}
+
+			if ( empty( $payload['lead']['last_name'] ) ) {
+				$payload['lead']['last_name'] = 'User';
 			}
 
 			if ( empty( $payload['lead']['email_from'] ) ) {
@@ -9840,12 +10046,27 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			if ( null !== $ticket_key ) {
 				$payload['ticket']['partner_email'] = $email;
 				if ( empty( $payload['ticket']['partner_name'] ) ) {
-					$payload['ticket']['partner_name'] = $contact_name;
+					$payload['ticket']['partner_name'] = 'Test User';
+				}
+				if ( empty( $payload['ticket']['first_name'] ) ) {
+					$payload['ticket']['first_name'] = 'Test';
+				}
+				if ( empty( $payload['ticket']['last_name'] ) ) {
+					$payload['ticket']['last_name'] = 'User';
+				}
+				if ( empty( $payload['ticket']['customer_id'] ) ) {
+					$payload['ticket']['customer_id'] = $company_name;
+				}
+				if ( empty( $payload['ticket']['company_name'] ) ) {
+					$payload['ticket']['company_name'] = $company_name;
 				}
 			} else {
 				$payload['partner_email'] = $email;
 				if ( empty( $payload['partner_name'] ) ) {
 					$payload['partner_name'] = $contact_name;
+				}
+				if ( empty( $payload['customer_id'] ) ) {
+					$payload['customer_id'] = $company_name;
 				}
 			}
 		}
@@ -9872,8 +10093,9 @@ class GF_Odoo_Addon extends GFFeedAddOn {
 			return 0;
 		}
 
-		$crm    = new CRM_Handler( $api );
-		$found  = $crm->find_partner_by_email( $email );
+		$crm = new CRM_Handler( $api );
+		$partner_handler = new Partner_Handler( $api, $crm );
+		$found = $partner_handler->find_person_by_email( $email );
 
 		return null !== $found ? (int) $found : 0;
 	}
