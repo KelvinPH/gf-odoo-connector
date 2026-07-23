@@ -2,6 +2,13 @@
 
 All notable changes to GF Odoo Connector are documented here.
 
+## [1.6.1] - 2026-07-23
+
+### Fixed
+
+- Country resolver now correctly handles Gravity Forms values like `Netherlands (NL)` by reading the ISO code in parentheses.
+- Avoided false matches such as Nigeria → Niger, Dominican Republic → Dominica, and Guinea-Bissau → Guinea.
+
 ## [1.6.0] - 2026-07-20
 
 ### Added
